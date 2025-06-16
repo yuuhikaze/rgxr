@@ -1,0 +1,82 @@
+services:
+  traefik:
+    image: traefik:v3.4
+    restart: unless-stopped
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - proxy
+
+  postgres:
+    image: postgres:17.5-alpine3.22
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data.
+      - ./migrations:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: ${PG_ROOT_PASSWD}
+      PG_AUTHENTICATOR_PASSWORD: ${PG_AUTHENTICATOR_PASSWD}
+    networks:
+      - rgxr-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgrest:
+    image: postgrest/postgrest:v13.0.2
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${PG_AUTHENTICATOR_PASSWD}@postgres/postgres
+      PGRST_DB_SCHEMAS: api
+      PGRST_DB_ANON_ROLE: web_anon
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.postgrest.rule=Host(`localhost`) && PathPrefix(`/pgapi`)
+      - traefik.http.routers.postgrest.entrypoints=web
+      - traefik.http.services.postgrest.loadbalancer.server.port=3000
+      - traefik.http.middlewares.strip-pgapi.stripprefix.prefixes=/pgapi
+      - traefik.http.routers.postgrest.middlewares=strip-pgapi
+    depends_on:
+      - postgres
+    networks:
+      - rgxr-net
+      - proxy
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    volumes:
+      - rgxr-data:/data
+    networks:
+      - rgxr-net
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend.entrypoints=web
+      - traefik.http.services.backend.loadbalancer.server.port=8080
+      - traefik.http.middlewares.strip-backendapi.stripprefix.prefixes=/api
+      - traefik.http.routers.backend.middlewares=strip-backendapi
+
+volumes:
+  pgdata:
+  rgxr-data:
+
+networks:
+  proxy:
+    driver: bridge
+  rgxr-net:
+    driver: bridge
