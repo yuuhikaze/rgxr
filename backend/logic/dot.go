@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -11,22 +12,20 @@ func ToDot(fa FA) string {
 
 	b.WriteString("digraph FA {\n")
 	b.WriteString("  rankdir=LR;\n") // Left to right
-
-	// Invisible start node to initial
-	b.WriteString("  start [shape=point];\n")
-	b.WriteString(fmt.Sprintf("  start -> \"%s\";\n", fa.Initial))
+	b.WriteString("  start [style=invis];\n")
 
 	// Define nodes
-	for _, state := range fa.States {
-		shape := "circle"
-		peripheries := 1
-		if Contains(fa.Acceptance, state) {
-			peripheries = 2 // double circle for acceptance
+	if len(fa.Acceptance) > 0 {
+		b.WriteString("  node [shape=doublecircle];")
+		for _, acc := range fa.Acceptance {
+			b.WriteString(fmt.Sprintf(" \"%s\"", acc))
 		}
-		b.WriteString(fmt.Sprintf("  \"%s\" [shape=%s peripheries=%d];\n", state, shape, peripheries))
+		b.WriteString(";\n")
 	}
+	b.WriteString("  node [shape=circle];\n")
 
 	// Transitions: for each state, for each symbol, add edges
+	b.WriteString(fmt.Sprintf("  start -> \"%s\";\n", fa.Initial))
 	for i, from := range fa.States {
 		for j, symbol := range fa.Alphabet {
 			dest := fa.Transitions[i][j]
@@ -45,5 +44,6 @@ func ToDot(fa FA) string {
 	}
 
 	b.WriteString("}\n")
+	log.Println(b.String())
 	return b.String()
 }
