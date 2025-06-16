@@ -44,6 +44,6 @@ func ToDot(fa FA) string {
 	}
 
 	b.WriteString("}\n")
-	log.Println(b.String())
+	log.Println(b.String()) // DEBUGLOG
 	return b.String()
 }

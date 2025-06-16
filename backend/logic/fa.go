@@ -1,11 +1,11 @@
 package logic
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
+	"io"
+	"net/http"
 	"strings"
 )
 
@@ -158,33 +158,42 @@ func uniqueStrings(arr []string) []string {
 	return res
 }
 
-// UnionFAs loads FAs by UUIDs, unions them all (left-associative), returns result
+// UnionFAs loads FAs by UUIDs via the PostgREST API and unions them all (left-associative), returns result.
 func UnionFAs(uuids []string) (*FA, error) {
 	if len(uuids) < 2 {
 		return nil, fmt.Errorf("need at least two FAs to union")
 	}
 
-	// Load from DB or file system — here we simulate via JSON in files for simplicity.
+	// Load from PostgREST API
 	var automata []*FA
-
 	for _, uuid := range uuids {
-		cmd := exec.Command("psql", "-U", "authenticator", "-d", "postgres", "-c",
-			fmt.Sprintf("SELECT tuple FROM api.finite_automatas WHERE id='%s';", uuid))
-		out, err := cmd.Output()
+		url := fmt.Sprintf("http://postgrest:3000/finite_automatas?id=eq.%s", uuid)
+		resp, err := http.Get(url)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error fetching FA from PostgREST: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("error fetching FA: %s", resp.Status)
 		}
 
-		// Extract JSON from psql output (this is a simplification — better to query through Go pgx or pgxpool)
-		jsonStart := bytes.IndexByte(out, '{')
-		jsonEnd := bytes.LastIndexByte(out, '}') + 1
-		jsonData := out[jsonStart:jsonEnd]
-
-		fa, err := ParseFAFromJSON(jsonData)
+		// Read the JSON response
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error reading response body: %v", err)
 		}
-		automata = append(automata, fa)
+
+		var fa []FA
+		if err := json.Unmarshal(body, &fa); err != nil {
+			return nil, fmt.Errorf("error unmarshalling response JSON: %v", err)
+		}
+
+		if len(fa) == 0 {
+			return nil, fmt.Errorf("no FA found for UUID %s", uuid)
+		}
+
+		automata = append(automata, &fa[0])
 	}
 
 	// Perform union pairwise
