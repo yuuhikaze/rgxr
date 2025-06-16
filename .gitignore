@@ -1,3 +1,5 @@
 # secrets stores
 .env
 .env.*
+# homework
+migrations/**/*homework*
