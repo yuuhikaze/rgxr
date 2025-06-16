@@ -3,8 +3,6 @@ package logic
 
 import (
 	"fmt"
-	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -44,7 +42,7 @@ func FAToRegex(fa *FA) (string, error) {
 	}
 
 	// Fill in original transitions
-	for i, state := range fa.States {
+	for i := range fa.States {
 		for j, symbol := range fa.Alphabet {
 			next := fa.Transitions[i][j]
 			stateIdx := i + 1 // +1 because of START state

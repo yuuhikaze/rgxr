@@ -173,7 +173,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 		}
 
 		for len(stack) > 0 {
-			current := stack[len(stack)-1]
+			// current := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 
 			// Find epsilon transitions (assuming epsilon is represented as empty string or special symbol)
@@ -214,7 +214,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 
 		row := make([]interface{}, len(nfa.Alphabet))
 		
-		for symbolIdx, symbol := range nfa.Alphabet {
+		for symbolIdx := range nfa.Alphabet {
 			// Compute next state set
 			nextStates := make(map[string]bool)
 			
@@ -278,7 +278,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 
 	// Convert state sets to state names and build final DFA
 	dfaStateNames := make([]string, len(dfaStates))
-	for i, stateSet := range dfaStates {
+	for i := range dfaStates {
 		dfaStateNames[i] = fmt.Sprintf("q%d", i)
 	}
 
@@ -390,7 +390,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 		for i, state := range fa.States {
 			row := make([]interface{}, len(baseAlphabet))
 			
-			for j, symbol := range baseAlphabet {
+			for j := range baseAlphabet {
 				originalNext := fa.Transitions[i][j]
 				
 				// If this is an accepting state and not the last FA,
