@@ -56,12 +56,12 @@ func Union(fa1, fa2 *FA) (*FA, error) {
 
 	// Build new states as concatenation "fa1State|fa2State"
 	newStates := []string{}
-	stateMap := map[string]bool{}
+	stateIndexMap := make(map[string]int) // maps combined state name to its index
 
 	for _, s1 := range fa1.States {
 		for _, s2 := range fa2.States {
 			newState := s1 + "|" + s2
-			stateMap[newState] = true
+			stateIndexMap[newState] = len(newStates)
 			newStates = append(newStates, newState)
 		}
 	}
@@ -71,47 +71,58 @@ func Union(fa1, fa2 *FA) (*FA, error) {
 
 	// New acceptance states: any combined state where one part is acceptance in original
 	newAcceptance := []string{}
-	for state := range stateMap {
+	for _, state := range newStates {
 		parts := strings.Split(state, "|")
-		if Contains(fa1.Acceptance, parts[0]) || Contains(fa2.Acceptance, parts[1]) {
+		if len(parts) == 2 && (Contains(fa1.Acceptance, parts[0]) || Contains(fa2.Acceptance, parts[1])) {
 			newAcceptance = append(newAcceptance, state)
 		}
 	}
 
 	// Build transitions: for each new state, for each symbol, get next state from both FAs
 	newTransitions := make([][]interface{}, len(newStates))
+	
 	for i, state := range newStates {
 		parts := strings.Split(state, "|")
+		if len(parts) != 2 {
+			continue // Skip malformed states
+		}
+		
 		row := make([]interface{}, len(fa1.Alphabet))
+		
 		for j := range fa1.Alphabet {
-			// Find index of symbol in alphabet (should be j)
 			// Find next states in fa1 and fa2
 			next1 := getNextState(fa1, parts[0], j)
 			next2 := getNextState(fa2, parts[1], j)
-			if next1 == "@v" && next2 == "@v" {
+			
+			// Combine next states
+			combinedNext := combineNextStates(next1, next2)
+			
+			// Convert to proper combined state names
+			if combinedNext == "@v" {
 				row[j] = "@v"
-			} else {
-				// Combine next states; if either is multiple, flatten to array
-				nextStates := []string{}
-				if ns, ok := next1.([]string); ok {
-					nextStates = append(nextStates, ns...)
-				} else if s, ok := next1.(string); ok && s != "@v" {
-					nextStates = append(nextStates, s)
+			} else if nextStates, ok := combinedNext.([]string); ok {
+				// Multiple next states
+				var validNextStates []string
+				for _, ns := range nextStates {
+					if Contains(newStates, ns) {
+						validNextStates = append(validNextStates, ns)
+					}
 				}
-				if ns, ok := next2.([]string); ok {
-					nextStates = append(nextStates, ns...)
-				} else if s, ok := next2.(string); ok && s != "@v" {
-					nextStates = append(nextStates, s)
-				}
-				// Remove duplicates
-				nextStates = uniqueStrings(nextStates)
-				if len(nextStates) == 0 {
+				if len(validNextStates) == 0 {
 					row[j] = "@v"
-				} else if len(nextStates) == 1 {
-					row[j] = nextStates[0]
+				} else if len(validNextStates) == 1 {
+					row[j] = validNextStates[0]
 				} else {
-					row[j] = nextStates
+					row[j] = validNextStates
 				}
+			} else if nextState, ok := combinedNext.(string); ok {
+				if Contains(newStates, nextState) {
+					row[j] = nextState
+				} else {
+					row[j] = "@v"
+				}
+			} else {
+				row[j] = "@v"
 			}
 		}
 		newTransitions[i] = row
@@ -124,6 +135,84 @@ func Union(fa1, fa2 *FA) (*FA, error) {
 		Acceptance:  newAcceptance,
 		Transitions: newTransitions,
 	}, nil
+}
+
+// combineNextStates combines the next states from two FAs into combined state names
+func combineNextStates(next1, next2 interface{}) interface{} {
+	// Handle case where either is "@v" (void/error state)
+	if next1 == "@v" && next2 == "@v" {
+		return "@v"
+	}
+	
+	// Convert to string slices for easier handling
+	states1 := interfaceToStateSlice(next1)
+	states2 := interfaceToStateSlice(next2)
+	
+	// If either is empty (void), treat as empty
+	if len(states1) == 0 && len(states2) == 0 {
+		return "@v"
+	}
+	
+	// Handle case where one is void
+	if len(states1) == 0 {
+		states1 = []string{"@v"}
+	}
+	if len(states2) == 0 {
+		states2 = []string{"@v"}
+	}
+	
+	// Create all combinations
+	var combined []string
+	for _, s1 := range states1 {
+		for _, s2 := range states2 {
+			combinedState := s1 + "|" + s2
+			combined = append(combined, combinedState)
+		}
+	}
+	
+	// Remove duplicates
+	combined = uniqueStrings(combined)
+	
+	if len(combined) == 0 {
+		return "@v"
+	} else if len(combined) == 1 {
+		return combined[0]
+	} else {
+		return combined
+	}
+}
+
+// interfaceToStateSlice converts interface{} to []string
+func interfaceToStateSlice(next interface{}) []string {
+	if next == "@v" || next == nil {
+		return []string{}
+	}
+	
+	switch v := next.(type) {
+	case string:
+		if v == "@v" {
+			return []string{}
+		}
+		return []string{v}
+	case []string:
+		var result []string
+		for _, s := range v {
+			if s != "@v" {
+				result = append(result, s)
+			}
+		}
+		return result
+	case []interface{}:
+		var result []string
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "@v" {
+				result = append(result, s)
+			}
+		}
+		return result
+	default:
+		return []string{}
+	}
 }
 
 // getNextState returns the next state(s) for fa at state index and symbol index.
@@ -139,7 +228,7 @@ func getNextState(fa *FA, state string, symbolIdx int) interface{} {
 	if rowIdx == -1 {
 		return "@v"
 	}
-	if symbolIdx >= len(fa.Transitions[rowIdx]) {
+	if rowIdx >= len(fa.Transitions) || symbolIdx >= len(fa.Transitions[rowIdx]) {
 		return "@v"
 	}
 	return fa.Transitions[rowIdx][symbolIdx]
@@ -184,16 +273,25 @@ func UnionFAs(uuids []string) (*FA, error) {
 			return nil, fmt.Errorf("error reading response body: %v", err)
 		}
 
-		var fa []FA
-		if err := json.Unmarshal(body, &fa); err != nil {
+		var faArray []struct {
+			ID          string          `json:"id"`
+			Description *string         `json:"description"`
+			Tuple       FA              `json:"tuple"`
+			Render      string          `json:"render"`
+			CreatedAt   string          `json:"created_at"`
+		}
+		
+		if err := json.Unmarshal(body, &faArray); err != nil {
 			return nil, fmt.Errorf("error unmarshalling response JSON: %v", err)
 		}
 
-		if len(fa) == 0 {
+		if len(faArray) == 0 {
 			return nil, fmt.Errorf("no FA found for UUID %s", uuid)
 		}
 
-		automata = append(automata, &fa[0])
+		// Extract the FA from the tuple field
+		fa := faArray[0].Tuple
+		automata = append(automata, &fa)
 	}
 
 	// Perform union pairwise
