@@ -60,6 +60,7 @@ services:
       - postgres
     volumes:
       - rgxr-data:/data
+      - /usr/local/texlive/${TEXLIVE_YEAR}/bin/x86_64-linux:/usr/local/texlive/${TEXLIVE_YEAR}/bin/x86_64-linux
     networks:
       - rgxr-net
       - proxy
@@ -70,6 +71,18 @@ services:
       - traefik.http.services.backend.loadbalancer.server.port=8080
       - traefik.http.middlewares.strip-backendapi.stripprefix.prefixes=/api
       - traefik.http.routers.backend.middlewares=strip-backendapi
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=Host(`localhost`)
+      - traefik.http.routers.frontend.entrypoints=web
+      - traefik.http.services.frontend.loadbalancer.server.port=80
 
 volumes:
   pgdata:
