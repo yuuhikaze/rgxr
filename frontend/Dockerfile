@@ -1,19 +1,19 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN bun run build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:1.28-alpine
 
 # Copy built app to nginx
 COPY --from=builder /app/build /usr/share/nginx/html
