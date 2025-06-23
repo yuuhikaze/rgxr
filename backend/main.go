@@ -24,7 +24,6 @@ func main() {
 	r.HandleFunc("/tex/{uuid}", handlers.GetTeXHandler).Methods("GET")
 	r.HandleFunc("/svg/{uuid}", handlers.GetSVGHandler).Methods("GET")
 	r.HandleFunc("/render", handlers.RenderHandler).Methods("POST")
-	r.HandleFunc("/save-image", handlers.SaveImageHandler).Methods("POST")
 
 	log.Println("Backend running on :8080")
 	log.Println("Available endpoints:")
@@ -37,7 +36,6 @@ func main() {
 	log.Println("  POST /regex-to-nfa - Convert regex to NFA")
 	log.Println("  GET  /nfa-to-dfa?uuid=<uuid> - Convert NFA to DFA")
 	log.Println("  POST /render - Render FA to SVG")
-	log.Println("  POST /save-image - Save SVG image")
 	log.Println("  GET  /tex/{uuid} - Get saved TeX file")
 	log.Println("  GET  /svg/{uuid} - Get saved SVG file")
 
