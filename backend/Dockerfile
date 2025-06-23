@@ -9,16 +9,11 @@ RUN go mod download
 COPY . .
 RUN go build -o rgxr-backend .
 
-FROM alpine:latest
+FROM texlive/texlive:latest-small
 
-RUN apk add --no-cache \
-    graphviz \
-    pdf2svg \
-    python3 \
-    py3-pip
+RUN tlmgr install preview
 
-# Install dot2tex
-RUN pip3 install dot2tex
+RUN apt-get update && apt-get install -y dot2tex pdf2svg
 
 WORKDIR /app
 COPY --from=builder /app/rgxr-backend .

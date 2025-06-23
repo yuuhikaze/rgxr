@@ -60,7 +60,6 @@ services:
       - postgres
     volumes:
       - rgxr-data:/data
-      - /usr/local/texlive/${TEXLIVE_YEAR}/bin/x86_64-linux:/usr/local/texlive/${TEXLIVE_YEAR}/bin/x86_64-linux
     networks:
       - rgxr-net
       - proxy

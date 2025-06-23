@@ -45,7 +45,7 @@
 
 <div class="app">
     <header>
-        <h1>RGXR - Regular Expression Visualizer</h1>
+        <h1>RGXR</h1>
     </header>
 
     <main>
