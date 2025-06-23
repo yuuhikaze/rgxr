@@ -71,17 +71,17 @@ func Intersection(fas []*FA) (*FA, error) {
 	}
 
 	// Build transitions
-	newTransitions := make([][]interface{}, len(newStates))
+	newTransitions := make([][]any, len(newStates))
 	for i, state := range newStates {
 		parts := strings.Split(state, "|")
 		if len(parts) != len(fas) {
 			continue
 		}
 
-		row := make([]interface{}, len(baseAlphabet))
+		row := make([]any, len(baseAlphabet))
 		for j := range baseAlphabet {
 			// Get next states from all FAs
-			nextParts := make([]interface{}, len(fas))
+			nextParts := make([]any, len(fas))
 			for k, part := range parts {
 				nextParts[k] = getNextState(fas[k], part, j)
 			}
@@ -127,7 +127,7 @@ func Intersection(fas []*FA) (*FA, error) {
 }
 
 // combineIntersectionStates combines next states for intersection
-func combineIntersectionStates(nextParts []interface{}) interface{} {
+func combineIntersectionStates(nextParts []any) any {
 	// Convert all parts to state slices
 	stateSets := make([][]string, len(nextParts))
 	for i, part := range nextParts {
@@ -191,33 +191,33 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 
 	// Start with initial state closure
 	initialClosure := epsilonClosure([]string{nfa.Initial})
-	
+
 	// DFA states will be sets of NFA states
 	dfaStates := [][]string{initialClosure}
 	stateToIndex := make(map[string]int)
 	stateToIndex[strings.Join(initialClosure, ",")] = 0
 
 	// Build DFA states and transitions
-	dfaTransitions := [][]interface{}{}
+	dfaTransitions := [][]any{}
 	queue := [][]string{initialClosure}
 	processed := make(map[string]bool)
 
 	for len(queue) > 0 {
 		currentSet := queue[0]
 		queue = queue[1:]
-		
+
 		currentKey := strings.Join(currentSet, ",")
 		if processed[currentKey] {
 			continue
 		}
 		processed[currentKey] = true
 
-		row := make([]interface{}, len(nfa.Alphabet))
-		
+		row := make([]any, len(nfa.Alphabet))
+
 		for symbolIdx := range nfa.Alphabet {
 			// Compute next state set
 			nextStates := make(map[string]bool)
-			
+
 			for _, state := range currentSet {
 				stateIdx := -1
 				for i, s := range nfa.States {
@@ -226,11 +226,11 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 						break
 					}
 				}
-				
-				if stateIdx >= 0 && stateIdx < len(nfa.Transitions) && 
-				   symbolIdx < len(nfa.Transitions[stateIdx]) {
+
+				if stateIdx >= 0 && stateIdx < len(nfa.Transitions) &&
+					symbolIdx < len(nfa.Transitions[stateIdx]) {
 					next := nfa.Transitions[stateIdx][symbolIdx]
-					
+
 					switch v := next.(type) {
 					case string:
 						if v != "@v" {
@@ -242,7 +242,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 								nextStates[ns] = true
 							}
 						}
-					case []interface{}:
+					case []any:
 						for _, item := range v {
 							if s, ok := item.(string); ok && s != "@v" {
 								nextStates[s] = true
@@ -260,16 +260,16 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 					nextStateSlice = append(nextStateSlice, state)
 				}
 				sort.Strings(nextStateSlice)
-				
+
 				nextClosure := epsilonClosure(nextStateSlice)
 				nextKey := strings.Join(nextClosure, ",")
-				
+
 				if _, exists := stateToIndex[nextKey]; !exists {
 					stateToIndex[nextKey] = len(dfaStates)
 					dfaStates = append(dfaStates, nextClosure)
 					queue = append(queue, nextClosure)
 				}
-				
+
 				row[symbolIdx] = nextKey
 			}
 		}
@@ -283,9 +283,9 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 	}
 
 	// Update transitions to use new state names
-	finalTransitions := make([][]interface{}, len(dfaTransitions))
+	finalTransitions := make([][]any, len(dfaTransitions))
 	for i, row := range dfaTransitions {
-		finalRow := make([]interface{}, len(row))
+		finalRow := make([]any, len(row))
 		for j, transition := range row {
 			if transition == "@v" {
 				finalRow[j] = "@v"
@@ -323,7 +323,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 // Complement returns the complement of an FA (flip acceptance states)
 func Complement(fa *FA) *FA {
 	newAcceptance := []string{}
-	
+
 	for _, state := range fa.States {
 		if !Contains(fa.Acceptance, state) {
 			newAcceptance = append(newAcceptance, state)
@@ -331,9 +331,9 @@ func Complement(fa *FA) *FA {
 	}
 
 	// Create a copy of the FA with flipped acceptance states
-	newTransitions := make([][]interface{}, len(fa.Transitions))
+	newTransitions := make([][]any, len(fa.Transitions))
 	for i, row := range fa.Transitions {
-		newRow := make([]interface{}, len(row))
+		newRow := make([]any, len(row))
 		copy(newRow, row)
 		newTransitions[i] = newRow
 	}
@@ -372,7 +372,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 	// Rename states to avoid conflicts
 	allStates := []string{}
 	stateMapping := make([]map[string]string, len(fas))
-	
+
 	for faIdx, fa := range fas {
 		stateMapping[faIdx] = make(map[string]string)
 		for _, state := range fa.States {
@@ -383,21 +383,21 @@ func Concatenation(fas []*FA) (*FA, error) {
 	}
 
 	// Build concatenated transitions
-	allTransitions := make([][]interface{}, len(allStates))
+	allTransitions := make([][]any, len(allStates))
 	stateIndex := 0
 
 	for faIdx, fa := range fas {
 		for i, state := range fa.States {
-			row := make([]interface{}, len(baseAlphabet))
-			
+			row := make([]any, len(baseAlphabet))
+
 			for j := range baseAlphabet {
 				originalNext := fa.Transitions[i][j]
-				
+
 				// If this is an accepting state and not the last FA,
 				// add epsilon transitions to next FA's initial state
 				isAccepting := Contains(fa.Acceptance, state)
 				isLastFA := faIdx == len(fas)-1
-				
+
 				switch v := originalNext.(type) {
 				case string:
 					if v == "@v" {
@@ -422,7 +422,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 						nextFAInitial := stateMapping[faIdx+1][fas[faIdx+1].Initial]
 						newNext = append(newNext, nextFAInitial)
 					}
-					
+
 					if len(newNext) == 0 {
 						row[j] = "@v"
 					} else if len(newNext) == 1 {
@@ -481,10 +481,10 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 		for j := i + 1; j < n; j++ {
 			state1 := dfa.States[i]
 			state2 := dfa.States[j]
-			
+
 			isAccepting1 := Contains(dfa.Acceptance, state1)
 			isAccepting2 := Contains(dfa.Acceptance, state2)
-			
+
 			if isAccepting1 != isAccepting2 {
 				distinguishable[i][j] = true
 				distinguishable[j][i] = true
@@ -503,13 +503,13 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 					for symbolIdx := range dfa.Alphabet {
 						next1 := getNextState(dfa, dfa.States[i], symbolIdx)
 						next2 := getNextState(dfa, dfa.States[j], symbolIdx)
-						
+
 						// Convert to state indices
 						idx1 := getStateIndex(dfa, next1)
 						idx2 := getStateIndex(dfa, next2)
-						
+
 						if idx1 != -1 && idx2 != -1 && idx1 != idx2 &&
-						   distinguishable[min(idx1, idx2)][max(idx1, idx2)] {
+							distinguishable[min(idx1, idx2)][max(idx1, idx2)] {
 							distinguishable[i][j] = true
 							distinguishable[j][i] = true
 							changed = true
@@ -524,29 +524,29 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 	// Find equivalent classes
 	processed := make([]bool, n)
 	equivalenceClasses := [][]int{}
-	
+
 	for i := 0; i < n; i++ {
 		if processed[i] {
 			continue
 		}
-		
+
 		class := []int{i}
 		processed[i] = true
-		
+
 		for j := i + 1; j < n; j++ {
 			if !processed[j] && !distinguishable[i][j] {
 				class = append(class, j)
 				processed[j] = true
 			}
 		}
-		
+
 		equivalenceClasses = append(equivalenceClasses, class)
 	}
 
 	// Build minimized DFA
 	newStates := make([]string, len(equivalenceClasses))
 	oldToNew := make(map[int]int)
-	
+
 	for i, class := range equivalenceClasses {
 		newStates[i] = fmt.Sprintf("q%d", i)
 		for _, oldIdx := range class {
@@ -555,15 +555,15 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 	}
 
 	// Build transitions for minimized DFA
-	newTransitions := make([][]interface{}, len(newStates))
+	newTransitions := make([][]any, len(newStates))
 	for i, class := range equivalenceClasses {
 		representative := class[0] // Use first state as representative
-		row := make([]interface{}, len(dfa.Alphabet))
-		
+		row := make([]any, len(dfa.Alphabet))
+
 		for j := range dfa.Alphabet {
 			next := getNextState(dfa, dfa.States[representative], j)
 			nextIdx := getStateIndex(dfa, next)
-			
+
 			if nextIdx == -1 {
 				row[j] = "@v"
 			} else {
@@ -597,7 +597,7 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 }
 
 // Helper functions
-func getStateIndex(fa *FA, state interface{}) int {
+func getStateIndex(fa *FA, state any) int {
 	if stateStr, ok := state.(string); ok && stateStr != "@v" {
 		for i, s := range fa.States {
 			if s == stateStr {

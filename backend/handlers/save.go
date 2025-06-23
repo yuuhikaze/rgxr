@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"net/http"
 	"github.com/yuuhikaze/rgxr/storage"
+	"net/http"
 )
 
 type SaveImageRequest struct {

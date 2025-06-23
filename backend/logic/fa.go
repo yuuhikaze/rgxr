@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"slices"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,11 +12,11 @@ import (
 
 // FA represents a finite automaton.
 type FA struct {
-	Alphabet    []string        `json:"alphabet"`
-	States      []string        `json:"states"`
-	Initial     string          `json:"initial"`
-	Acceptance  []string        `json:"acceptance"`
-	Transitions [][]interface{} `json:"transitions"` // 2D array; each cell string or []string
+	Alphabet    []string `json:"alphabet"`
+	States      []string `json:"states"`
+	Initial     string   `json:"initial"`
+	Acceptance  []string `json:"acceptance"`
+	Transitions [][]any  `json:"transitions"` // 2D array; each cell string or []string
 }
 
 // ParseFAFromJSON parses a FA from raw JSON bytes.
@@ -33,12 +34,7 @@ func ParseFAFromJSON(data []byte) (*FA, error) {
 
 // Contains returns true if slice contains val.
 func Contains(slice []string, val string) bool {
-	for _, s := range slice {
-		if s == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, val)
 }
 
 // Union creates a new FA representing the union of two FAs.
@@ -79,24 +75,24 @@ func Union(fa1, fa2 *FA) (*FA, error) {
 	}
 
 	// Build transitions: for each new state, for each symbol, get next state from both FAs
-	newTransitions := make([][]interface{}, len(newStates))
-	
+	newTransitions := make([][]any, len(newStates))
+
 	for i, state := range newStates {
 		parts := strings.Split(state, "|")
 		if len(parts) != 2 {
 			continue // Skip malformed states
 		}
-		
-		row := make([]interface{}, len(fa1.Alphabet))
-		
+
+		row := make([]any, len(fa1.Alphabet))
+
 		for j := range fa1.Alphabet {
 			// Find next states in fa1 and fa2
 			next1 := getNextState(fa1, parts[0], j)
 			next2 := getNextState(fa2, parts[1], j)
-			
+
 			// Combine next states
 			combinedNext := combineNextStates(next1, next2)
-			
+
 			// Convert to proper combined state names
 			if combinedNext == "@v" {
 				row[j] = "@v"
@@ -138,21 +134,21 @@ func Union(fa1, fa2 *FA) (*FA, error) {
 }
 
 // combineNextStates combines the next states from two FAs into combined state names
-func combineNextStates(next1, next2 interface{}) interface{} {
+func combineNextStates(next1, next2 any) any {
 	// Handle case where either is "@v" (void/error state)
 	if next1 == "@v" && next2 == "@v" {
 		return "@v"
 	}
-	
+
 	// Convert to string slices for easier handling
 	states1 := interfaceToStateSlice(next1)
 	states2 := interfaceToStateSlice(next2)
-	
+
 	// If either is empty (void), treat as empty
 	if len(states1) == 0 && len(states2) == 0 {
 		return "@v"
 	}
-	
+
 	// Handle case where one is void
 	if len(states1) == 0 {
 		states1 = []string{"@v"}
@@ -160,7 +156,7 @@ func combineNextStates(next1, next2 interface{}) interface{} {
 	if len(states2) == 0 {
 		states2 = []string{"@v"}
 	}
-	
+
 	// Create all combinations
 	var combined []string
 	for _, s1 := range states1 {
@@ -169,10 +165,10 @@ func combineNextStates(next1, next2 interface{}) interface{} {
 			combined = append(combined, combinedState)
 		}
 	}
-	
+
 	// Remove duplicates
 	combined = uniqueStrings(combined)
-	
+
 	if len(combined) == 0 {
 		return "@v"
 	} else if len(combined) == 1 {
@@ -182,12 +178,12 @@ func combineNextStates(next1, next2 interface{}) interface{} {
 	}
 }
 
-// interfaceToStateSlice converts interface{} to []string
-func interfaceToStateSlice(next interface{}) []string {
+// interfaceToStateSlice converts any to []string
+func interfaceToStateSlice(next any) []string {
 	if next == "@v" || next == nil {
 		return []string{}
 	}
-	
+
 	switch v := next.(type) {
 	case string:
 		if v == "@v" {
@@ -202,7 +198,7 @@ func interfaceToStateSlice(next interface{}) []string {
 			}
 		}
 		return result
-	case []interface{}:
+	case []any:
 		var result []string
 		for _, item := range v {
 			if s, ok := item.(string); ok && s != "@v" {
@@ -216,7 +212,7 @@ func interfaceToStateSlice(next interface{}) []string {
 }
 
 // getNextState returns the next state(s) for fa at state index and symbol index.
-func getNextState(fa *FA, state string, symbolIdx int) interface{} {
+func getNextState(fa *FA, state string, symbolIdx int) any {
 	// Find row index for state
 	rowIdx := -1
 	for i, s := range fa.States {
@@ -274,13 +270,13 @@ func UnionFAs(uuids []string) (*FA, error) {
 		}
 
 		var faArray []struct {
-			ID          string          `json:"id"`
-			Description *string         `json:"description"`
-			Tuple       FA              `json:"tuple"`
-			Render      string          `json:"render"`
-			CreatedAt   string          `json:"created_at"`
+			ID          string  `json:"id"`
+			Description *string `json:"description"`
+			Tuple       FA      `json:"tuple"`
+			Render      string  `json:"render"`
+			CreatedAt   string  `json:"created_at"`
 		}
-		
+
 		if err := json.Unmarshal(body, &faArray); err != nil {
 			return nil, fmt.Errorf("error unmarshalling response JSON: %v", err)
 		}

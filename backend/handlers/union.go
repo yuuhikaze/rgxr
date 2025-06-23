@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"net/http"
 	"github.com/yuuhikaze/rgxr/logic"
+	"net/http"
 )
 
 type UnionRequest struct {

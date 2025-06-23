@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/yuuhikaze/rgxr/logic"
-	"regexp"
 	"github.com/yuuhikaze/rgxr/storage"
 	"net/http"
+	"regexp"
 )
 
 type ConvertRequest struct {

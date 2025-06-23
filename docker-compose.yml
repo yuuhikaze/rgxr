@@ -50,7 +50,7 @@ services:
       - postgres
     networks:
       - rgxr-net
-      - proxy
+      - proxy # testing
 
   backend:
     build:
@@ -62,7 +62,7 @@ services:
       - rgxr-data:/data
     networks:
       - rgxr-net
-      - proxy
+      - proxy # testing
     labels:
       - traefik.enable=true
       - traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`)

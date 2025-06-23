@@ -4,9 +4,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/yuuhikaze/rgxr/logic"
 	"io"
 	"net/http"
-	"github.com/yuuhikaze/rgxr/logic"
 )
 
 // IntersectionRequest represents request for FA intersection
@@ -228,13 +228,13 @@ func loadFAFromAPI(uuid string) (*logic.FA, error) {
 	}
 
 	var faArray []struct {
-		ID          string    `json:"id"`
-		Description *string   `json:"description"`
-		Tuple       logic.FA  `json:"tuple"`
-		Render      string    `json:"render"`
-		CreatedAt   string    `json:"created_at"`
+		ID          string   `json:"id"`
+		Description *string  `json:"description"`
+		Tuple       logic.FA `json:"tuple"`
+		Render      string   `json:"render"`
+		CreatedAt   string   `json:"created_at"`
 	}
-	
+
 	if err := json.Unmarshal(body, &faArray); err != nil {
 		return nil, fmt.Errorf("error unmarshalling response JSON: %v", err)
 	}

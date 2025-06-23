@@ -14,7 +14,7 @@ func FAToRegex(fa *FA) (string, error) {
 
 	// Create a copy of the FA with added start and end states
 	// This simplifies the state elimination algorithm
-	
+
 	// Create transition matrix
 	n := len(fa.States) + 2 // +2 for new start and end states
 	stateNames := make([]string, n)
@@ -46,7 +46,7 @@ func FAToRegex(fa *FA) (string, error) {
 		for j, symbol := range fa.Alphabet {
 			next := fa.Transitions[i][j]
 			stateIdx := i + 1 // +1 because of START state
-			
+
 			switch v := next.(type) {
 			case string:
 				if v != "@v" {
@@ -81,12 +81,12 @@ func FAToRegex(fa *FA) (string, error) {
 				if i == k || j == k {
 					continue
 				}
-				
+
 				// R_ij = R_ij ∪ R_ik R_kk* R_kj
 				rik := regexMatrix[i][k]
 				rkk := regexMatrix[k][k]
 				rkj := regexMatrix[k][j]
-				
+
 				if rik != "∅" && rkj != "∅" {
 					var newPart string
 					if rkk == "∅" {
@@ -147,24 +147,24 @@ func concatenateRegex(r1, r2 string) string {
 	if r2 == "ε" {
 		return r1
 	}
-	
+
 	// Add parentheses if needed
 	needParens1 := strings.Contains(r1, "∪")
 	needParens2 := strings.Contains(r2, "∪")
-	
+
 	result := ""
 	if needParens1 {
 		result += "(" + r1 + ")"
 	} else {
 		result += r1
 	}
-	
+
 	if needParens2 {
 		result += "(" + r2 + ")"
 	} else {
 		result += r2
 	}
-	
+
 	return result
 }
 
@@ -172,7 +172,7 @@ func kleeneStarRegex(r string) string {
 	if r == "∅" || r == "ε" {
 		return "ε"
 	}
-	
+
 	// Check if parentheses are needed
 	if len(r) == 1 || (strings.HasPrefix(r, "(") && strings.HasSuffix(r, ")")) {
 		return r + "*"
@@ -193,20 +193,20 @@ func getStateIndexInList(states []string, state string) int {
 func parseRegexToNFA(regex string) (*FA, error) {
 	// This is a very basic implementation
 	// A full implementation would need proper parsing of operators, precedence, etc.
-	
+
 	if len(regex) == 1 {
 		// Single character
 		return createCharacterNFA(regex), nil
 	}
-	
+
 	// For now, return a simple NFA that accepts the literal string
 	// In practice, you'd implement Thompson's construction properly
 	states := []string{"q0", "q1"}
-	transitions := [][]interface{}{
+	transitions := [][]any{
 		{[]string{"q1"}}, // from q0 on the character
 		{"@v"},           // from q1 (no transitions)
 	}
-	
+
 	return &FA{
 		Alphabet:    []string{regex}, // Simplified - should extract actual alphabet
 		States:      states,
@@ -222,7 +222,7 @@ func createEmptyNFA() *FA {
 		States:      []string{"q0"},
 		Initial:     "q0",
 		Acceptance:  []string{}, // No accepting states
-		Transitions: [][]interface{}{{"@v"}},
+		Transitions: [][]any{{"@v"}},
 	}
 }
 
@@ -232,17 +232,17 @@ func createEpsilonNFA() *FA {
 		States:      []string{"q0"},
 		Initial:     "q0",
 		Acceptance:  []string{"q0"}, // Initial state is accepting for epsilon
-		Transitions: [][]interface{}{{"@v"}},
+		Transitions: [][]any{{"@v"}},
 	}
 }
 
 func createCharacterNFA(char string) *FA {
 	return &FA{
-		Alphabet:    []string{char},
-		States:      []string{"q0", "q1"},
-		Initial:     "q0",
-		Acceptance:  []string{"q1"},
-		Transitions: [][]interface{}{
+		Alphabet:   []string{char},
+		States:     []string{"q0", "q1"},
+		Initial:    "q0",
+		Acceptance: []string{"q1"},
+		Transitions: [][]any{
 			{"q1"}, // from q0 on char to q1
 			{"@v"}, // from q1 (no transitions)
 		},
@@ -262,12 +262,12 @@ func RegexToNFAComplete(regex string) (*FA, error) {
 	if len(tokens) == 0 {
 		return createEmptyNFA(), nil
 	}
-	
+
 	fragment, err := buildNFAFromTokens(tokens)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return fragment.FA, nil
 }
 
@@ -275,7 +275,7 @@ func RegexToNFAComplete(regex string) (*FA, error) {
 func tokenizeRegex(regex string) []string {
 	var tokens []string
 	runes := []rune(regex)
-	
+
 	for i := 0; i < len(runes); i++ {
 		switch runes[i] {
 		case '(':
@@ -296,7 +296,7 @@ func tokenizeRegex(regex string) []string {
 			tokens = append(tokens, string(runes[i]))
 		}
 	}
-	
+
 	return tokens
 }
 
@@ -305,7 +305,7 @@ func buildNFAFromTokens(tokens []string) (*NFAFragment, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("empty token list")
 	}
-	
+
 	// Simple implementation for basic cases
 	if len(tokens) == 1 {
 		token := tokens[0]
@@ -321,12 +321,12 @@ func buildNFAFromTokens(tokens []string) (*NFAFragment, error) {
 			return &NFAFragment{Start: "q0", End: "q1", FA: fa}, nil
 		}
 	}
-	
+
 	// For more complex expressions, you would implement proper parsing
 	// This is a simplified version
 	return &NFAFragment{
 		Start: "q0",
-		End:   "q1", 
+		End:   "q1",
 		FA:    createCharacterNFA(strings.Join(tokens, "")),
 	}, nil
 }
