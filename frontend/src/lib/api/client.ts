@@ -6,7 +6,7 @@ export interface FA {
     transitions: (string | string[])[][];
 }
 
-export interface ConvertResponse {
+export interface RenderResponse {
     id: string;
     svg: string;
     tex: string;
@@ -28,9 +28,9 @@ export class APIClient {
         this.baseURL = baseURL;
     }
 
-    // Convert FA to SVG/TeX
-    async convertFA(fa: FA): Promise<ConvertResponse> {
-        const response = await fetch(`${this.baseURL}/api/convert`, {
+    // Render FA to SVG/TeX
+    async renderFA(fa: FA): Promise<RenderResponse> {
+        const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -45,9 +45,9 @@ export class APIClient {
         return response.json();
     }
 
-    // Convert FA by UUID
-    async convertByUUID(uuid: string): Promise<ConvertResponse> {
-        const response = await fetch(`${this.baseURL}/api/convert`, {
+    // Render FA by UUID
+    async renderByUUID(uuid: string): Promise<RenderResponse> {
+        const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ export class APIClient {
         });
 
         if (!response.ok) {
-            throw new Error(`Conversion failed: ${response.statusText}`);
+            throw new Error(`Render failed: ${response.statusText}`);
         }
 
         return response.json();

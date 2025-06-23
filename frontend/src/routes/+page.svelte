@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    // import { onMount } from 'svelte';
     import FAList from '$lib/components/FAList.svelte';
     import GraphViewer from '$lib/components/GraphViewer.svelte';
     import OperationsPanel from '$lib/components/OperationsPanel.svelte';
@@ -14,12 +14,12 @@
     async function handleFASelect(fa: FARecord) {
         loading = true;
         try {
-            const result = await api.convertByUUID(fa.id);
+            const result = await api.renderByUUID(fa.id);
             currentFA = fa.tuple;
             currentSVG = result.svg;
             currentTeX = result.tex;
         } catch (e) {
-            console.error('Failed to convert FA:', e);
+            console.error('Failed to render FA:', e);
         } finally {
             loading = false;
         }
@@ -28,7 +28,7 @@
     async function handleOperationResult(fa: FA) {
         loading = true;
         try {
-            const result = await api.convertFA(fa);
+            const result = await api.renderFA(fa);
             currentFA = fa;
             currentSVG = result.svg;
             currentTeX = result.tex;
@@ -36,7 +36,7 @@
             // Optionally save the result
             // await api.saveFA(fa, `/data/images/${result.id}.svg`, 'Operation result');
         } catch (e) {
-            console.error('Failed to convert result:', e);
+            console.error('Failed to render result:', e);
         } finally {
             loading = false;
         }
@@ -56,7 +56,7 @@
 
         <div class="content">
             {#if loading}
-                <div class="loading">Converting...</div>
+                <div class="loading">Rendering...</div>
             {:else}
                 <GraphViewer svg={currentSVG} tex={currentTeX} />
             {/if}

@@ -9,20 +9,20 @@ import (
 	"regexp"
 )
 
-type ConvertRequest struct {
+type RenderRequest struct {
 	FA   *logic.FA `json:"fa,omitempty"`
 	UUID string    `json:"uuid,omitempty"`
 }
 
-type ConvertResponse struct {
+type RenderResponse struct {
 	ID  string `json:"id"`
 	SVG string `json:"svg"`
 	TeX string `json:"tex"`
 	DOT string `json:"dot"`
 }
 
-func ConvertHandler(w http.ResponseWriter, r *http.Request) {
-	var req ConvertRequest
+func RenderHandler(w http.ResponseWriter, r *http.Request) {
+	var req RenderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
@@ -80,7 +80,7 @@ func ConvertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return response
-	resp := ConvertResponse{
+	resp := RenderResponse{
 		ID:  id,
 		SVG: svg,
 		TeX: tex,

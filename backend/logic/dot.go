@@ -2,7 +2,6 @@ package logic
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -44,6 +43,5 @@ func ToDot(fa FA) string {
 	}
 
 	b.WriteString("}\n")
-	log.Println(b.String()) // DEBUGLOG
 	return b.String()
 }
