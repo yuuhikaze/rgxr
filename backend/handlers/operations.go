@@ -9,21 +9,22 @@ import (
 	"net/http"
 )
 
-// IntersectionRequest represents request for FA intersection
-type IntersectionRequest struct {
-	UUIDs []string `json:"uuids"`
+// BooleanRequest represents request for FA intersection
+type BooleanRequest struct {
+	UUIDs []string          `json:"uuids"`
+	Mode  logic.BooleanMode `json:"mode"`
 }
 
-// IntersectionHandler handles intersection of multiple FAs
-func IntersectionHandler(w http.ResponseWriter, r *http.Request) {
-	var req IntersectionRequest
+// BooleanHandler handles intersection of multiple FAs
+func BooleanHandler(w http.ResponseWriter, r *http.Request) {
+	var req BooleanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if len(req.UUIDs) < 2 {
-		http.Error(w, "Need at least two FAs for intersection", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Need at least two FAs for %s", req.Mode), http.StatusBadRequest)
 		return
 	}
 
@@ -38,10 +39,10 @@ func IntersectionHandler(w http.ResponseWriter, r *http.Request) {
 		automata = append(automata, fa)
 	}
 
-	// Perform intersection
-	result, err := logic.Intersection(automata)
+	// Perform boolean operation
+	result, err := logic.PerformBoolean(automata, req.Mode)
 	if err != nil {
-		http.Error(w, "Intersection error: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Boolean error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

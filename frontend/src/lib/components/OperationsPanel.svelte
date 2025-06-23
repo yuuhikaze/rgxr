@@ -22,21 +22,26 @@
             switch (operation) {
                 case 'union':
                     if (selectedIds.length < 2) {
-                        throw new Error('Union requires at least 2 FAs');
+                        throw new Error('Intersection requires at least 2 FAs');
                     }
-                    result = await api.union(selectedIds);
+                    const unionResponse = await fetch('/api/union', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uuids: selectedIds, mode: 'union' })
+                    });
+                    result = await unionResponse.json();
                     break;
 
                 case 'intersection':
                     if (selectedIds.length < 2) {
                         throw new Error('Intersection requires at least 2 FAs');
                     }
-                    const response = await fetch('/api/intersection', {
+                    const intersectionResponse = await fetch('/api/intersection', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uuids: selectedIds })
+                        body: JSON.stringify({ uuids: selectedIds, mode: 'intersection' })
                     });
-                    result = await response.json();
+                    result = await intersectionResponse.json();
                     break;
 
                 case 'complement':

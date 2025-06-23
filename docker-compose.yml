@@ -19,8 +19,8 @@ services:
     image: postgres:17.5-alpine3.22
     restart: unless-stopped
     volumes:
-      - pgdata:/var/lib/postgresql/data.
-      - ./migrations:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_PASSWORD: ${PG_ROOT_PASSWD}
       PG_AUTHENTICATOR_PASSWORD: ${PG_AUTHENTICATOR_PASSWD}

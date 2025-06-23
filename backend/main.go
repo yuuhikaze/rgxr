@@ -11,7 +11,7 @@ func main() {
 	r := mux.NewRouter()
 
 	// Existing endpoints
-	r.HandleFunc("/union", handlers.UnionHandler).Methods("POST")
+	r.HandleFunc("/union", handlers.BooleanHandler).Methods("POST")
 	r.HandleFunc("/convert", handlers.ConvertHandler).Methods("POST")
 	r.HandleFunc("/save-image", handlers.SaveImageHandler).Methods("POST")
 
@@ -20,7 +20,7 @@ func main() {
 	r.HandleFunc("/svg/{uuid}", handlers.GetSVGHandler).Methods("GET")
 
 	// Extended endpoints
-	r.HandleFunc("/intersection", handlers.IntersectionHandler).Methods("POST")
+	r.HandleFunc("/intersection", handlers.BooleanHandler).Methods("POST")
 	r.HandleFunc("/nfa-to-dfa", handlers.NFAToDFAHandler).Methods("GET")
 	r.HandleFunc("/fa-to-regex", handlers.FAToRegexHandler).Methods("GET")
 	r.HandleFunc("/regex-to-nfa", handlers.RegexToNFAHandler).Methods("POST")
