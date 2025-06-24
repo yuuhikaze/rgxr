@@ -33,9 +33,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ fa }),
+            body: JSON.stringify({ fa })
         });
 
         if (!response.ok) {
@@ -50,9 +50,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ uuid }),
+            body: JSON.stringify({ uuid })
         });
 
         if (!response.ok) {
@@ -94,9 +94,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/union`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ uuids }),
+            body: JSON.stringify({ uuids })
         });
 
         if (!response.ok) {
@@ -111,9 +111,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/concatenation`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ uuids }),
+            body: JSON.stringify({ uuids })
         });
 
         if (!response.ok) {
@@ -128,9 +128,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/fa-to-regex`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ uuid }),
+            body: JSON.stringify({ uuid })
         });
 
         if (!response.ok) {
@@ -146,9 +146,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/regex-to-nfa`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ regex }),
+            body: JSON.stringify({ regex })
         });
 
         if (!response.ok) {
@@ -163,9 +163,9 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/api/nfa-to-dfa`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ uuid }),
+            body: JSON.stringify({ uuid })
         });
 
         if (!response.ok) {
@@ -178,21 +178,21 @@ export class APIClient {
     // Save FA to database
     async saveFA(fa: FA, description?: string): Promise<void> {
         const id = crypto.randomUUID();
-        
+
         // First render the FA to get the render path
         const renderResult = await this.renderFA(fa);
 
         const response = await fetch(`${this.baseURL}/pgapi/rpc/save_fa`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 id,
                 tuple: fa,
                 render: renderResult.id,
-                description,
-            }),
+                description
+            })
         });
 
         if (!response.ok) {
@@ -208,13 +208,13 @@ export class APIClient {
         const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
             method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 tuple: fa,
                 render: renderResult.id,
-                description,
-            }),
+                description
+            })
         });
 
         if (!response.ok) {
@@ -225,7 +225,7 @@ export class APIClient {
     // Delete FA from database
     async deleteFA(uuid: string): Promise<void> {
         const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
-            method: 'DELETE',
+            method: 'DELETE'
         });
 
         if (!response.ok) {

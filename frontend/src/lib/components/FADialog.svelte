@@ -1,25 +1,31 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
     import type { FA } from '$lib/api/client';
 
-    const dispatch = createEventDispatcher<{
-        save: { fa: FA; description?: string };
-        cancel: void;
-    }>();
+    interface Props {
+        open?: boolean;
+        editingFA?: FA | null;
+        isEditing?: boolean;
+        onsave?: (event: CustomEvent<{ fa: FA; description?: string }>) => void;
+        oncancel?: (event: CustomEvent<void>) => void;
+    }
 
-    export let open = false;
-    export let editingFA: FA | null = null;
-    export let isEditing = false;
+    let {
+        open = $bindable(false),
+        editingFA = $bindable(null),
+        isEditing = $bindable(false),
+        onsave,
+        oncancel
+    }: Props = $props();
 
     // Form state
-    let alphabet = '';
-    let states = '';
-    let initialState = '';
-    let acceptanceStates: string[] = [];
-    let description = '';
-    let selectedState = '';
-    let selectedCell: { row: number; col: number } | null = null;
-    let table: (string | string[])[][] = [];
+    let alphabet = $state('');
+    let states = $state('');
+    let initialState = $state('');
+    let acceptanceStates = $state<string[]>([]);
+    let description = $state('');
+    let selectedState = $state('');
+    let selectedCell = $state<{ row: number; col: number } | null>(null);
+    let table = $state<(string | string[])[][]>([]);
 
     // State types for visual representation
     const STATE_TYPES = {
@@ -29,34 +35,44 @@
         BOTH: 3
     };
 
-    // Initialize form when editing
-    $: if (open && editingFA && isEditing) {
-        alphabet = editingFA.alphabet.join(', ');
-        states = editingFA.states.join(', ');
-        initialState = editingFA.initial;
-        acceptanceStates = [...editingFA.acceptance];
-        table = editingFA.transitions.map(row => [...row]);
-    } else if (open && !isEditing) {
-        // Reset form for new FA
-        alphabet = '';
-        states = '';
-        initialState = '';
-        acceptanceStates = [];
-        description = '';
-        selectedState = '';
-        selectedCell = null;
-        table = [];
-    }
-
-    // Update table when alphabet or states change
-    $: if (alphabet && states) {
-        const stateList = states.split(',').map(s => s.trim()).filter(s => s);
-        const symbolList = alphabet.split(',').map(s => s.trim()).filter(s => s);
-        
-        if (!isEditing || table.length === 0) {
-            table = stateList.map(() => symbolList.map(() => ''));
+    // Initialize form when editing - using $effect for Svelte 5
+    $effect(() => {
+        if (open && editingFA && isEditing) {
+            alphabet = editingFA.alphabet.join(', ');
+            states = editingFA.states.join(', ');
+            initialState = editingFA.initial;
+            acceptanceStates = [...editingFA.acceptance];
+            table = editingFA.transitions.map((row) => [...row]);
+        } else if (open && !isEditing) {
+            // Reset form for new FA
+            alphabet = '';
+            states = '';
+            initialState = '';
+            acceptanceStates = [];
+            description = '';
+            selectedState = '';
+            selectedCell = null;
+            table = [];
         }
-    }
+    });
+
+    // Update table when alphabet or states change - using $effect for Svelte 5
+    $effect(() => {
+        if (alphabet && states) {
+            const stateList = states
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => s);
+            const symbolList = alphabet
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => s);
+
+            if (!isEditing || table.length === 0) {
+                table = stateList.map(() => symbolList.map(() => ''));
+            }
+        }
+    });
 
     function getStateType(state: string): number {
         const isAcceptance = acceptanceStates.includes(state);
@@ -71,7 +87,7 @@
     function setStateType(state: string, type: number): void {
         // Remove from acceptance states if needed
         if (type === STATE_TYPES.NORMAL || type === STATE_TYPES.INITIAL) {
-            acceptanceStates = acceptanceStates.filter(s => s !== state);
+            acceptanceStates = acceptanceStates.filter((s) => s !== state);
         }
 
         // Add to acceptance states if needed
@@ -137,8 +153,14 @@
     }
 
     function handleSave() {
-        const stateList = states.split(',').map(s => s.trim()).filter(s => s);
-        const symbolList = alphabet.split(',').map(s => s.trim()).filter(s => s);
+        const stateList = states
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s);
+        const symbolList = alphabet
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s);
 
         const fa: FA = {
             alphabet: symbolList,
@@ -148,11 +170,13 @@
             transitions: table
         };
 
-        dispatch('save', { fa, description: description || undefined });
+        onsave?.(
+            new CustomEvent('save', { detail: { fa, description: description || undefined } })
+        );
     }
 
     function handleCancel() {
-        dispatch('cancel');
+        oncancel?.(new CustomEvent('cancel'));
     }
 </script>
 
@@ -164,43 +188,50 @@
             <div class="modal-header">
                 <h2>{isEditing ? 'Edit' : 'Create'} Finite Automaton</h2>
                 <button class="close-btn" on:click={handleCancel}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"/>
+                    <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
             <div class="modal-body">
                 <p class="description">Both NFA and DFA creation are supported.</p>
-                
+
                 <div class="form-section">
                     <div class="form-group">
                         <label for="description">Description (optional)</label>
-                        <input 
+                        <input
                             id="description"
-                            class="form-input" 
-                            placeholder="Description for this FA" 
-                            bind:value={description} 
+                            class="form-input"
+                            placeholder="Description for this FA"
+                            bind:value={description}
                         />
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="alphabet">Alphabet</label>
-                        <input 
+                        <input
                             id="alphabet"
-                            class="form-input" 
-                            placeholder="a, b, c" 
-                            bind:value={alphabet} 
+                            class="form-input"
+                            placeholder="a, b, c"
+                            bind:value={alphabet}
                         />
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="states">States</label>
-                        <input 
+                        <input
                             id="states"
-                            class="form-input" 
-                            placeholder="q0, q1, q2" 
-                            bind:value={states} 
+                            class="form-input"
+                            placeholder="q0, q1, q2"
+                            bind:value={states}
                         />
                     </div>
                 </div>
@@ -208,21 +239,24 @@
                 {#if alphabet && states}
                     <div class="transition-table">
                         <h3>Transition Table</h3>
-                        <p class="table-help">Click a state to select it, then click cells to set transitions. Scroll on states to change their type.</p>
-                        
+                        <p class="table-help">
+                            Click a state to select it, then click cells to set transitions. Scroll
+                            on states to change their type.
+                        </p>
+
                         <table>
                             <thead>
                                 <tr>
                                     <th class="state-header">δ</th>
-                                    <th 
+                                    <th
                                         class="symbol-header"
                                         class:selected={selectedState === 'ε'}
                                         on:click={() => handleStateSelect('ε')}
                                     >
                                         ε
                                     </th>
-                                    {#each alphabet.split(',').map(s => s.trim()) as symbol}
-                                        <th 
+                                    {#each alphabet.split(',').map((s) => s.trim()) as symbol}
+                                        <th
                                             class="symbol-header"
                                             class:selected={selectedState === symbol}
                                             on:click={() => handleStateSelect(symbol)}
@@ -233,9 +267,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {#each states.split(',').map(s => s.trim()) as state, rowIdx}
+                                {#each states.split(',').map((s) => s.trim()) as state, rowIdx}
                                     <tr>
-                                        <td 
+                                        <td
                                             class="state-cell {getStateStyles(state)}"
                                             class:selected={selectedState === state}
                                             on:click={() => handleStateSelect(state)}
@@ -243,21 +277,24 @@
                                         >
                                             {state}
                                         </td>
-                                        <td 
+                                        <td
                                             class="transition-cell"
                                             on:click={() => handleCellClick(rowIdx, -1)}
                                         >
                                             ∅
                                         </td>
-                                        {#each alphabet.split(',').map(s => s.trim()) as symbol, colIdx}
-                                            <td 
+                                        {#each alphabet
+                                            .split(',')
+                                            .map((s) => s.trim()) as symbol, colIdx}
+                                            <td
                                                 class="transition-cell"
-                                                class:selected={selectedCell?.row === rowIdx && selectedCell?.col === colIdx}
+                                                class:selected={selectedCell?.row === rowIdx &&
+                                                    selectedCell?.col === colIdx}
                                                 on:click={() => handleCellClick(rowIdx, colIdx)}
                                             >
                                                 {#if table[rowIdx]?.[colIdx]}
-                                                    {Array.isArray(table[rowIdx][colIdx]) 
-                                                        ? table[rowIdx][colIdx].join(', ') 
+                                                    {Array.isArray(table[rowIdx][colIdx])
+                                                        ? table[rowIdx][colIdx].join(', ')
                                                         : table[rowIdx][colIdx]}
                                                 {:else}
                                                     ∅
@@ -273,11 +310,9 @@
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-secondary" on:click={handleCancel}>
-                    Cancel
-                </button>
-                <button 
-                    class="btn btn-primary" 
+                <button class="btn btn-secondary" on:click={handleCancel}> Cancel </button>
+                <button
+                    class="btn btn-primary"
                     on:click={handleSave}
                     disabled={!alphabet || !states || !initialState}
                 >
@@ -409,7 +444,8 @@
         border: 1px solid #e0e0e0;
     }
 
-    th, td {
+    th,
+    td {
         border: 1px solid #e0e0e0;
         padding: 0.5rem;
         text-align: center;
@@ -453,7 +489,19 @@
     }
 
     .state-cell.acceptance-state {
+        position: relative;
+    }
+
+    .state-cell.acceptance-state::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         border: 3px double #374151;
+        pointer-events: none;
+        box-sizing: border-box;
     }
 
     .state-cell.initial-state::before {
@@ -523,4 +571,3 @@
         cursor: not-allowed;
     }
 </style>
-

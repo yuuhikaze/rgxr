@@ -12,7 +12,7 @@
     let currentSVG: string = '';
     let currentTeX: string = '';
     let loading = false;
-    
+
     // Dialog state
     let showFADialog = false;
     let editingFA: FA | null = null;
@@ -133,7 +133,7 @@
         <h1>RGXR</h1>
     </header>
 
-    <Toolbar 
+    <Toolbar
         hasSelection={selectedIds.length > 0}
         hasCurrentFA={currentFA !== null}
         canSave={currentFA !== null}
@@ -160,7 +160,7 @@
     </main>
 </div>
 
-<FADialog 
+<FADialog
     bind:open={showFADialog}
     {editingFA}
     {isEditing}
