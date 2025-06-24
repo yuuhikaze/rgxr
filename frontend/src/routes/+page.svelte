@@ -148,11 +148,11 @@
         hasSelection={selectedIds.length > 0}
         hasCurrentFA={currentFA !== null}
         canSave={currentFA !== null}
-        on:add={handleAdd}
-        on:edit={handleEdit}
-        on:remove={handleRemove}
-        on:save={handleSave}
-        on:download={handleDownload}
+        onadd={handleAdd}
+        onedit={handleEdit}
+        onremove={handleRemove}
+        onsave={handleSave}
+        ondownload={handleDownload}
     />
 
     <main>

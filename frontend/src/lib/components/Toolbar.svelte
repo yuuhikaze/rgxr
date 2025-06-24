@@ -1,22 +1,30 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    interface Props {
+        hasSelection?: boolean;
+        hasCurrentFA?: boolean;
+        canSave?: boolean;
+        onadd?: () => void;
+        onedit?: () => void;
+        onremove?: () => void;
+        onsave?: () => void;
+        ondownload?: () => void;
+    }
 
-    const dispatch = createEventDispatcher<{
-        add: void;
-        edit: void;
-        remove: void;
-        save: void;
-        download: void;
-    }>();
-
-    export let hasSelection = false;
-    export let hasCurrentFA = false;
-    export let canSave = false;
+    let { 
+        hasSelection = false, 
+        hasCurrentFA = false, 
+        canSave = false,
+        onadd,
+        onedit,
+        onremove,
+        onsave,
+        ondownload
+    }: Props = $props();
 </script>
 
 <div class="toolbar">
     <div class="toolbar-group">
-        <button class="toolbar-btn" on:click={() => dispatch('add')} title="Add new FA">
+        <button class="toolbar-btn" onclick={() => onadd?.()} title="Add new FA">
             <svg
                 width="20"
                 height="20"
@@ -32,7 +40,7 @@
 
         <button
             class="toolbar-btn"
-            on:click={() => dispatch('edit')}
+            onclick={() => onedit?.()}
             disabled={!hasSelection}
             title="Edit selected FA"
         >
@@ -52,7 +60,7 @@
 
         <button
             class="toolbar-btn"
-            on:click={() => dispatch('remove')}
+            onclick={() => onremove?.()}
             disabled={!hasSelection}
             title="Remove selected FA"
         >
@@ -76,7 +84,7 @@
 
         <button
             class="toolbar-btn"
-            on:click={() => dispatch('save')}
+            onclick={() => onsave?.()}
             disabled={!canSave}
             title="Save current FA to database"
         >
@@ -97,7 +105,7 @@
 
         <button
             class="toolbar-btn"
-            on:click={() => dispatch('download')}
+            onclick={() => ondownload?.()}
             disabled={!hasCurrentFA}
             title="Download current SVG"
         >
