@@ -23,8 +23,7 @@ type FA struct {
 	Transitions [][]any  `json:"transitions"` // 2D array; each cell string or []string
 }
 
-// PerformBoolean creates a new FA representing the boolean operation result of multiple FAs.
-// Similar to Union but acceptance states require ALL original FAs to accept.
+// PerformBoolean applies a boolean operation to multiple FAs and returns the resulting FA.
 func PerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 	if len(fas) < 2 {
 		return nil, fmt.Errorf("need at least two FAs for intersection")

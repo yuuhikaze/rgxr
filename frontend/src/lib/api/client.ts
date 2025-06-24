@@ -106,9 +106,81 @@ export class APIClient {
         return response.json();
     }
 
+    // Concatenation of multiple FAs
+    async concatenation(uuids: string[]): Promise<FA> {
+        const response = await fetch(`${this.baseURL}/api/concatenation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ uuids }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Concatenation failed: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
+    // Convert FA to regular expression
+    async faToRegex(uuid: string): Promise<string> {
+        const response = await fetch(`${this.baseURL}/api/fa-to-regex`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ uuid }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`FA to regex conversion failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.regex;
+    }
+
+    // Convert regular expression to NFA
+    async regexToNFA(regex: string): Promise<FA> {
+        const response = await fetch(`${this.baseURL}/api/regex-to-nfa`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ regex }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Regex to NFA conversion failed: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
+    // Convert NFA to DFA
+    async nfaToDFA(uuid: string): Promise<FA> {
+        const response = await fetch(`${this.baseURL}/api/nfa-to-dfa`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ uuid }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`NFA to DFA conversion failed: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
     // Save FA to database
-    async saveFA(fa: FA, renderPath: string, description?: string): Promise<void> {
+    async saveFA(fa: FA, description?: string): Promise<void> {
         const id = crypto.randomUUID();
+        
+        // First render the FA to get the render path
+        const renderResult = await this.renderFA(fa);
 
         const response = await fetch(`${this.baseURL}/pgapi/rpc/save_fa`, {
             method: 'POST',
@@ -118,13 +190,46 @@ export class APIClient {
             body: JSON.stringify({
                 id,
                 tuple: fa,
-                render: renderPath,
+                render: renderResult.id,
                 description,
             }),
         });
 
         if (!response.ok) {
             throw new Error(`Failed to save FA: ${response.statusText}`);
+        }
+    }
+
+    // Update FA in database
+    async updateFA(uuid: string, fa: FA, description?: string): Promise<void> {
+        // First render the FA to get the render path
+        const renderResult = await this.renderFA(fa);
+
+        const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tuple: fa,
+                render: renderResult.id,
+                description,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update FA: ${response.statusText}`);
+        }
+    }
+
+    // Delete FA from database
+    async deleteFA(uuid: string): Promise<void> {
+        const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete FA: ${response.statusText}`);
         }
     }
 

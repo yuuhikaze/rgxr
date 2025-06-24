@@ -3,6 +3,8 @@
     import FAList from '$lib/components/FAList.svelte';
     import GraphViewer from '$lib/components/GraphViewer.svelte';
     import OperationsPanel from '$lib/components/OperationsPanel.svelte';
+    import Toolbar from '$lib/components/Toolbar.svelte';
+    import FADialog from '$lib/components/FADialog.svelte';
     import { api, type FA, type FARecord } from '$lib/api/client';
 
     let selectedIds: string[] = [];
@@ -10,6 +12,11 @@
     let currentSVG: string = '';
     let currentTeX: string = '';
     let loading = false;
+    
+    // Dialog state
+    let showFADialog = false;
+    let editingFA: FA | null = null;
+    let isEditing = false;
 
     async function handleFASelect(fa: FARecord) {
         loading = true;
@@ -32,14 +39,92 @@
             currentFA = fa;
             currentSVG = result.svg;
             currentTeX = result.tex;
-
-            // Optionally save the result
-            // await api.saveFA(fa, `/data/images/${result.id}.svg`, 'Operation result');
         } catch (e) {
             console.error('Failed to render result:', e);
         } finally {
             loading = false;
         }
+    }
+
+    // Toolbar handlers
+    function handleAdd() {
+        editingFA = null;
+        isEditing = false;
+        showFADialog = true;
+    }
+
+    function handleEdit() {
+        if (selectedIds.length === 1) {
+            // TODO: Get the FA data for the selected ID and set editingFA
+            editingFA = currentFA;
+            isEditing = true;
+            showFADialog = true;
+        }
+    }
+
+    async function handleRemove() {
+        if (selectedIds.length > 0) {
+            try {
+                for (const id of selectedIds) {
+                    await api.deleteFA(id);
+                }
+                selectedIds = [];
+                // Refresh the FA list
+                window.location.reload();
+            } catch (e) {
+                console.error('Failed to remove FA:', e);
+            }
+        }
+    }
+
+    async function handleSave() {
+        if (currentFA) {
+            try {
+                await api.saveFA(currentFA);
+                alert('FA saved successfully!');
+            } catch (e) {
+                console.error('Failed to save FA:', e);
+                alert('Failed to save FA');
+            }
+        }
+    }
+
+    function handleDownload() {
+        if (currentSVG) {
+            const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'finite-automaton.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    // FA Dialog handlers
+    async function handleFADialogSave(event: CustomEvent<{ fa: FA; description?: string }>) {
+        try {
+            const { fa, description } = event.detail;
+            if (isEditing && selectedIds.length > 0) {
+                // Update existing FA
+                await api.updateFA(selectedIds[0], fa, description);
+            } else {
+                // Create new FA
+                await api.saveFA(fa, description);
+            }
+            showFADialog = false;
+            // Refresh the FA list
+            window.location.reload();
+        } catch (e) {
+            console.error('Failed to save FA:', e);
+            alert('Failed to save FA');
+        }
+    }
+
+    function handleFADialogCancel() {
+        showFADialog = false;
     }
 </script>
 
@@ -47,6 +132,17 @@
     <header>
         <h1>RGXR</h1>
     </header>
+
+    <Toolbar 
+        hasSelection={selectedIds.length > 0}
+        hasCurrentFA={currentFA !== null}
+        canSave={currentFA !== null}
+        on:add={handleAdd}
+        on:edit={handleEdit}
+        on:remove={handleRemove}
+        on:save={handleSave}
+        on:download={handleDownload}
+    />
 
     <main>
         <div class="sidebar">
@@ -63,6 +159,14 @@
         </div>
     </main>
 </div>
+
+<FADialog 
+    bind:open={showFADialog}
+    {editingFA}
+    {isEditing}
+    on:save={handleFADialogSave}
+    on:cancel={handleFADialogCancel}
+/>
 
 <style>
     .app {
