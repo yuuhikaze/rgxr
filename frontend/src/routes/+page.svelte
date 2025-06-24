@@ -77,14 +77,25 @@
         }
     }
 
+    let saveMessage = '';
+    let showSaveMessage = false;
+
     async function handleSave() {
         if (currentFA) {
             try {
                 await api.saveFA(currentFA);
-                alert('FA saved successfully!');
+                saveMessage = 'FA saved successfully!';
+                showSaveMessage = true;
+                setTimeout(() => {
+                    showSaveMessage = false;
+                }, 3000);
             } catch (e) {
                 console.error('Failed to save FA:', e);
-                alert('Failed to save FA');
+                saveMessage = 'Failed to save FA';
+                showSaveMessage = true;
+                setTimeout(() => {
+                    showSaveMessage = false;
+                }, 3000);
             }
         }
     }
@@ -164,8 +175,8 @@
     bind:open={showFADialog}
     {editingFA}
     {isEditing}
-    on:save={handleFADialogSave}
-    on:cancel={handleFADialogCancel}
+    onsave={handleFADialogSave}
+    oncancel={handleFADialogCancel}
 />
 
 <style>
