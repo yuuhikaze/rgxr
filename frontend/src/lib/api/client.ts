@@ -23,18 +23,44 @@ export interface FARecord {
 
 export class APIClient {
     private baseURL: string;
+    private token: string | null = null;
 
     constructor(baseURL: string = '') {
         this.baseURL = baseURL;
+    }
+
+    async setEditorToken() { // change this later
+        const email = 'editor@example.com'
+        const pass = 'securepassword'
+        const res = await fetch(`${this.baseURL}/rpc/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, pass })
+        });
+        const data = await res.json();
+        localStorage.setItem('jwt', data.token);
+        api.setToken(data.token);
+    }
+
+    public setToken(token: string | null) {
+        this.token = token;
+    }
+
+    private authHeaders(): HeadersInit {
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json'
+        };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        return headers;
     }
 
     // Render FA to SVG/TeX
     async renderFA(fa: FA): Promise<RenderResponse> {
         const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ fa })
         });
 
@@ -49,9 +75,7 @@ export class APIClient {
     async renderByUUID(uuid: string): Promise<RenderResponse> {
         const response = await fetch(`${this.baseURL}/api/render`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ uuid })
         });
 
@@ -93,9 +117,7 @@ export class APIClient {
     async union(uuids: string[]): Promise<FA> {
         const response = await fetch(`${this.baseURL}/api/union`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ uuids })
         });
 
@@ -110,9 +132,7 @@ export class APIClient {
     async concatenation(uuids: string[]): Promise<FA> {
         const response = await fetch(`${this.baseURL}/api/concatenation`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ uuids })
         });
 
@@ -127,9 +147,7 @@ export class APIClient {
     async faToRegex(uuid: string): Promise<string> {
         const response = await fetch(`${this.baseURL}/api/fa-to-regex`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ uuid })
         });
 
@@ -145,9 +163,7 @@ export class APIClient {
     async regexToNFA(regex: string): Promise<FA> {
         const response = await fetch(`${this.baseURL}/api/regex-to-nfa`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ regex })
         });
 
@@ -162,9 +178,7 @@ export class APIClient {
     async nfaToDFA(uuid: string): Promise<FA> {
         const response = await fetch(`${this.baseURL}/api/nfa-to-dfa`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({ uuid })
         });
 
@@ -182,11 +196,9 @@ export class APIClient {
         // First render the FA to get the render path
         const renderResult = await this.renderFA(fa);
 
-        const response = await fetch(`${this.baseURL}/pgapi/rpc/save_fa`, {
+        const response = await fetch(`${this.baseURL}/finite_automatas`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({
                 id,
                 tuple: fa,
@@ -207,9 +219,7 @@ export class APIClient {
 
         const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this.authHeaders(),
             body: JSON.stringify({
                 tuple: fa,
                 render: renderResult.id,
