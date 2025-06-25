@@ -57,17 +57,22 @@
 
 <style>
     .fa-list {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
         padding: 1rem;
         border: 1px solid #ddd;
         border-radius: 4px;
-        max-height: 400px;
-        overflow-y: auto;
+        overflow: hidden;
     }
 
     .list {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
     }
 
     .fa-item {

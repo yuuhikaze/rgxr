@@ -157,8 +157,12 @@
 
     <main>
         <div class="sidebar">
-            <FAList bind:selectedIds onSelect={handleFASelect} />
-            <OperationsPanel {selectedIds} onResult={handleOperationResult} />
+            <div class="sidebar-section">
+                <FAList bind:selectedIds onSelect={handleFASelect} />
+            </div>
+            <div class="sidebar-section">
+                <OperationsPanel {selectedIds} onResult={handleOperationResult} />
+            </div>
         </div>
 
         <div class="content">
@@ -211,7 +215,14 @@
         flex-direction: column;
         gap: 1rem;
         background-color: #f5f5f5;
-        overflow-y: auto;
+        overflow: hidden;
+    }
+
+    .sidebar-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .content {
