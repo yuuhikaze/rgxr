@@ -25,18 +25,37 @@ func ToDot(fa FA) string {
 
 	// Transitions: for each state, for each symbol, add edges
 	b.WriteString(fmt.Sprintf("  start -> \"%s\";\n", fa.Initial))
+	
 	for i, from := range fa.States {
 		for j, symbol := range fa.Alphabet {
-			dest := fa.Transitions[i][j]
-			if dest == "@v" {
+			if i >= len(fa.Transitions) || j >= len(fa.Transitions[i]) {
 				continue
 			}
+			
+			dest := fa.Transitions[i][j]
+			
+			// Handle different types of destinations
 			switch v := dest.(type) {
 			case string:
-				b.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", from, v, symbol))
+				if v != "@v" && v != "" {
+					// Escape special characters in labels
+					label := escapeLabel(symbol)
+					b.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", from, v, label))
+				}
 			case []string:
 				for _, d := range v {
-					b.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", from, d, symbol))
+					if d != "@v" && d != "" {
+						label := escapeLabel(symbol)
+						b.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", from, d, label))
+					}
+				}
+			case []any:
+				// Handle []any type which can contain strings
+				for _, item := range v {
+					if s, ok := item.(string); ok && s != "@v" && s != "" {
+						label := escapeLabel(symbol)
+						b.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\" [label=\"%s\"];\n", from, s, label))
+					}
 				}
 			}
 		}
@@ -44,4 +63,18 @@ func ToDot(fa FA) string {
 
 	b.WriteString("}\n")
 	return b.String()
+}
+
+// escapeLabel escapes special characters in DOT labels
+func escapeLabel(label string) string {
+	// Handle epsilon symbol
+	// if label == "@e" {
+	// 	return "$\\varepsilon$"
+	// }
+	
+	// Escape quotes and backslashes
+	label = strings.ReplaceAll(label, "\\", "\\\\")
+	label = strings.ReplaceAll(label, "\"", "\\\"")
+	
+	return label
 }
