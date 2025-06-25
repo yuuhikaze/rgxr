@@ -5,6 +5,7 @@
     import OperationsPanel from '$lib/components/OperationsPanel.svelte';
     import Toolbar from '$lib/components/Toolbar.svelte';
     import FADialog from '$lib/components/FADialog.svelte';
+    import SaveDialog from '$lib/components/SaveDialog.svelte';
     import { api, type FA, type FARecord } from '$lib/api/client';
 
     let selectedIds: string[] = [];
@@ -15,6 +16,7 @@
 
     // Dialog state
     let showFADialog = false;
+    let showSaveDialog = false;
     let editingFA: FA | null = null;
     let isEditing = false;
 
@@ -80,15 +82,25 @@
     let saveMessage = '';
     let showSaveMessage = false;
 
-    async function handleSave() {
+    function handleSave() {
+        if (currentFA) {
+            showSaveDialog = true;
+        }
+    }
+
+    // Save Dialog handlers
+    async function handleSaveDialogSave(description: string) {
         if (currentFA) {
             try {
-                await api.saveFA(currentFA);
-                saveMessage = 'FA saved successfully!';
+                await api.saveFA(currentFA, description);
+                saveMessage = 'FA successfully saved!';
                 showSaveMessage = true;
+                showSaveDialog = false;
                 setTimeout(() => {
                     showSaveMessage = false;
                 }, 3000);
+                // Refresh the FA list
+                window.location.reload();
             } catch (e) {
                 console.error('Failed to save FA:', e);
                 saveMessage = 'Failed to save FA';
@@ -98,6 +110,10 @@
                 }, 3000);
             }
         }
+    }
+
+    function handleSaveDialogCancel() {
+        showSaveDialog = false;
     }
 
     function handleDownload() {
@@ -155,6 +171,16 @@
         ondownload={handleDownload}
     />
 
+    {#if showSaveMessage}
+        <div
+            class="save-message"
+            class:success={saveMessage.includes('successfully')}
+            class:error={saveMessage.includes('Failed')}
+        >
+            {saveMessage}
+        </div>
+    {/if}
+
     <main>
         <div class="sidebar">
             <div class="sidebar-section">
@@ -182,6 +208,8 @@
     onsave={handleFADialogSave}
     oncancel={handleFADialogCancel}
 />
+
+<SaveDialog open={showSaveDialog} onsave={handleSaveDialogSave} oncancel={handleSaveDialogCancel} />
 
 <style>
     .app {
@@ -238,5 +266,41 @@
         height: 100%;
         font-size: 1.25rem;
         color: #666;
+    }
+
+    .save-message {
+        position: fixed;
+        top: 80px;
+        right: 1rem;
+        z-index: 1000;
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .save-message.success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .save-message.error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 </style>
