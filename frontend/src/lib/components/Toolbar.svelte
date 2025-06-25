@@ -10,9 +10,9 @@
         ondownload?: () => void;
     }
 
-    let { 
-        hasSelection = false, 
-        hasCurrentFA = false, 
+    let {
+        hasSelection = false,
+        hasCurrentFA = false,
         canSave = false,
         onadd,
         onedit,
