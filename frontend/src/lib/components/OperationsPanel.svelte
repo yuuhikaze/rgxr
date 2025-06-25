@@ -9,6 +9,7 @@
     let regexInput = '';
     let stringInput = '';
     let runResult: { accepted: boolean; path: string[] } | null = null;
+    let activeTab: 'unary' | 'binary' | 'regex' = 'unary';
 
     async function performOperation(operation: string) {
         if (selectedIds.length === 0 && operation !== 'regex-to-nfa') {
@@ -118,139 +119,271 @@
 </script>
 
 <div class="operations-panel">
-    <h3>Operations</h3>
+    <div class="panel-header">
+        <h3>Operations</h3>
+        <p class="selected-count">
+            Selected: {selectedIds.length} FA{selectedIds.length !== 1 ? 's' : ''}
+        </p>
+    </div>
 
     {#if error}
         <p class="error">{error}</p>
     {/if}
 
-    <div class="operations">
-        <button
-            on:click={() => performOperation('union')}
-            disabled={loading || selectedIds.length < 2}
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <button 
+            class="tab-button"
+            class:active={activeTab === 'unary'}
+            on:click={() => activeTab = 'unary'}
         >
-            Union (∪)
+            Unary Ops
         </button>
-
-        <button
-            on:click={() => performOperation('intersection')}
-            disabled={loading || selectedIds.length < 2}
+        <button 
+            class="tab-button"
+            class:active={activeTab === 'binary'}
+            on:click={() => activeTab = 'binary'}
         >
-            Intersection (∩)
+            Binary Ops
         </button>
-
-        <button
-            on:click={() => performOperation('concatenation')}
-            disabled={loading || selectedIds.length < 1}
+        <button 
+            class="tab-button"
+            class:active={activeTab === 'regex'}
+            on:click={() => activeTab = 'regex'}
         >
-            Concatenation
-        </button>
-
-        <button
-            on:click={() => performOperation('complement')}
-            disabled={loading || selectedIds.length !== 1}
-        >
-            Complement (¬)
-        </button>
-
-        <button
-            on:click={() => performOperation('minimize')}
-            disabled={loading || selectedIds.length !== 1}
-        >
-            Minimize DFA
-        </button>
-
-        <button
-            on:click={() => performOperation('nfa-to-dfa')}
-            disabled={loading || selectedIds.length !== 1}
-        >
-            NFA to DFA
-        </button>
-
-        <button
-            on:click={() => performOperation('fa-to-regex')}
-            disabled={loading || selectedIds.length !== 1}
-        >
-            FA to Regex
+            Regex/String
         </button>
     </div>
 
-    <div class="regex-section">
-        <h4>Regex to NFA</h4>
-        <div class="input-group">
-            <input
-                type="text"
-                bind:value={regexInput}
-                placeholder="Enter regular expression"
-                disabled={loading}
-            />
-            <button
-                on:click={() => performOperation('regex-to-nfa')}
-                disabled={loading || !regexInput}
-            >
-                Convert
-            </button>
-        </div>
-    </div>
+    <!-- Tab Content -->
+    <div class="tab-content">
+        {#if activeTab === 'unary'}
+            <div class="operations-grid">
+                <button
+                    on:click={() => performOperation('complement')}
+                    disabled={loading || selectedIds.length !== 1}
+                >
+                    Complement (¬)
+                </button>
 
-    <div class="run-section">
-        <h4>Test String</h4>
-        <div class="input-group">
-            <input
-                type="text"
-                bind:value={stringInput}
-                placeholder="Enter test string"
-                disabled={loading}
-            />
-            <button
-                on:click={() => performOperation('run-string')}
-                disabled={loading || selectedIds.length !== 1 || !stringInput}
-            >
-                Run
-            </button>
-        </div>
-        
-        {#if runResult}
-            <div class="run-result" class:accepted={runResult.accepted} class:rejected={!runResult.accepted}>
-                <p><strong>Result:</strong> {runResult.accepted ? 'Accepted' : 'Rejected'}</p>
-                <p><strong>Path:</strong> {runResult.path.join(' → ')}</p>
+                <button
+                    on:click={() => performOperation('minimize')}
+                    disabled={loading || selectedIds.length !== 1}
+                >
+                    Minimize DFA
+                </button>
+
+                <button
+                    on:click={() => performOperation('nfa-to-dfa')}
+                    disabled={loading || selectedIds.length !== 1}
+                >
+                    NFA to DFA
+                </button>
+
+                <button
+                    on:click={() => performOperation('fa-to-regex')}
+                    disabled={loading || selectedIds.length !== 1}
+                >
+                    FA to Regex
+                </button>
+            </div>
+        {/if}
+
+        {#if activeTab === 'binary'}
+            <div class="operations-grid">
+                <button
+                    on:click={() => performOperation('union')}
+                    disabled={loading || selectedIds.length < 2}
+                >
+                    Union (∪)
+                </button>
+
+                <button
+                    on:click={() => performOperation('intersection')}
+                    disabled={loading || selectedIds.length < 2}
+                >
+                    Intersection (∩)
+                </button>
+
+                <button
+                    on:click={() => performOperation('concatenation')}
+                    disabled={loading || selectedIds.length < 1}
+                >
+                    Concatenation
+                </button>
+            </div>
+        {/if}
+
+        {#if activeTab === 'regex'}
+            <div class="regex-string-section">
+                <div class="input-section">
+                    <h4>Regex to NFA</h4>
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            bind:value={regexInput}
+                            placeholder="Enter regular expression"
+                            disabled={loading}
+                        />
+                        <button
+                            on:click={() => performOperation('regex-to-nfa')}
+                            disabled={loading || !regexInput}
+                        >
+                            Convert
+                        </button>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h4>Test String</h4>
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            bind:value={stringInput}
+                            placeholder="Enter test string"
+                            disabled={loading}
+                        />
+                        <button
+                            on:click={() => performOperation('run-string')}
+                            disabled={loading || selectedIds.length !== 1 || !stringInput}
+                        >
+                            Run
+                        </button>
+                    </div>
+                    
+                    {#if runResult}
+                        <div class="run-result" class:accepted={runResult.accepted} class:rejected={!runResult.accepted}>
+                            <p><strong>Result:</strong> {runResult.accepted ? 'Accepted' : 'Rejected'}</p>
+                            <p><strong>Path:</strong> {runResult.path.join(' → ')}</p>
+                        </div>
+                    {/if}
+                </div>
             </div>
         {/if}
     </div>
-
-    <p class="selected-count">
-        Selected: {selectedIds.length} FA{selectedIds.length !== 1 ? 's' : ''}
-    </p>
 </div>
 
 <style>
     .operations-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
         padding: 1rem;
         border: 1px solid #ddd;
         border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .panel-header {
+        flex-shrink: 0;
+        margin-bottom: 1rem;
     }
 
     h3, h4 {
         margin: 0 0 0.5rem 0;
     }
 
-    .operations {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-        margin: 1rem 0;
+    .selected-count {
+        color: #666;
+        font-size: 0.875rem;
+        margin: 0.5rem 0 0 0;
     }
 
-    .regex-section, .run-section {
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid #e0e0e0;
+    .error {
+        color: #d32f2f;
+        margin: 0.5rem 0;
+        flex-shrink: 0;
+    }
+
+    /* Tab Navigation */
+    .tab-nav {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 1rem;
+        flex-shrink: 0;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background-color: transparent;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        color: #666;
+    }
+
+    .tab-button:hover {
+        background-color: #f5f5f5;
+        color: #333;
+    }
+
+    .tab-button.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        background-color: #f8f9fa;
+    }
+
+    /* Tab Content */
+    .tab-content {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    /* Operations Grid */
+    .operations-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .operations-grid button {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+        text-align: left;
+        min-height: 44px; /* Ensure minimum touch target */
+    }
+
+    .operations-grid button:hover:not(:disabled) {
+        background-color: #f5f5f5;
+        border-color: #007bff;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .operations-grid button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Regex/String Section */
+    .regex-string-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .input-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
     }
 
     .input-group {
         display: flex;
         gap: 0.5rem;
-        margin-top: 0.5rem;
     }
 
     .input-group input {
@@ -258,6 +391,30 @@
         padding: 0.5rem;
         border: 1px solid #ddd;
         border-radius: 4px;
+        font-size: 0.875rem;
+        min-width: 0; /* Allow input to shrink */
+    }
+
+    .input-group button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .input-group button:hover:not(:disabled) {
+        background-color: #f5f5f5;
+        border-color: #007bff;
+    }
+
+    .input-group button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
     .run-result {
@@ -279,33 +436,20 @@
         color: #721c24;
     }
 
-    button {
-        padding: 0.5rem 1rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background-color: #fff;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    button:hover:not(:disabled) {
-        background-color: #f5f5f5;
-    }
-
-    button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .error {
-        color: #d32f2f;
-        margin: 0.5rem 0;
-    }
-
-    .selected-count {
-        text-align: center;
-        color: #666;
-        font-size: 0.875rem;
-        margin-top: 1rem;
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .operations-panel {
+            padding: 0.75rem;
+        }
+        
+        .tab-button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .operations-grid button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
     }
 </style>
