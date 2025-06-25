@@ -215,6 +215,8 @@ GRANT EXECUTE ON FUNCTION api.login (text, text) TO web_anon;
 -- web_editor role
 CREATE ROLE web_editor noinherit;
 
+GRANT usage ON SCHEMA api TO web_editor;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON api.finite_automatas TO web_editor;
 
 GRANT web_editor TO authenticator;

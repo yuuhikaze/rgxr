@@ -220,7 +220,7 @@
                         <input
                             id="alphabet"
                             class="form-input"
-                            placeholder="a, b, c"
+                            placeholder="0, 1"
                             bind:value={alphabet}
                         />
                     </div>

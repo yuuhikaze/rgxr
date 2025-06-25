@@ -32,21 +32,22 @@ export class APIClient {
     async setEditorToken() { // change this later
         const email = 'editor@example.com'
         const pass = 'securepassword'
-        const res = await fetch(`${this.baseURL}/rpc/login`, {
+        const res = await fetch(`${this.baseURL}/pgapi/rpc/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, pass })
         });
         const data = await res.json();
-        localStorage.setItem('jwt', data.token);
-        api.setToken(data.token);
+        this.setToken(data.token);
     }
 
-    public setToken(token: string | null) {
+    public setToken(token: any) {
+        localStorage.setItem('jwt', token);
         this.token = token;
     }
 
     private authHeaders(): HeadersInit {
+        console.log("YO TOKEN: "+this.token)
         const headers: HeadersInit = {
             'Content-Type': 'application/json'
         };
@@ -196,7 +197,7 @@ export class APIClient {
         // First render the FA to get the render path
         const renderResult = await this.renderFA(fa);
 
-        const response = await fetch(`${this.baseURL}/finite_automatas`, {
+        const response = await fetch(`${this.baseURL}/pgapi/finite_automatas`, {
             method: 'POST',
             headers: this.authHeaders(),
             body: JSON.stringify({
@@ -235,6 +236,7 @@ export class APIClient {
     // Delete FA from database
     async deleteFA(uuid: string): Promise<void> {
         const response = await fetch(`${this.baseURL}/pgapi/finite_automatas?id=eq.${uuid}`, {
+            headers: this.authHeaders(),
             method: 'DELETE'
         });
 
