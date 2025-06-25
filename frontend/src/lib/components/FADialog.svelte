@@ -134,7 +134,41 @@
         selectedCell = { row: rowIdx, col: colIdx };
         if (selectedState) {
             if (!table[rowIdx]) table[rowIdx] = [];
-            table[rowIdx][colIdx] = selectedState;
+            
+            // Get current cell value
+            const currentValue = table[rowIdx][colIdx];
+            
+            // If cell is empty, add the selected state
+            if (!currentValue || currentValue === '') {
+                table[rowIdx][colIdx] = selectedState;
+            } else {
+                // Convert to array if it's not already
+                let statesArray: string[];
+                if (Array.isArray(currentValue)) {
+                    statesArray = [...currentValue];
+                } else {
+                    statesArray = [currentValue];
+                }
+                
+                // Toggle the selected state
+                const stateIndex = statesArray.indexOf(selectedState);
+                if (stateIndex === -1) {
+                    // Add state if not present
+                    statesArray.push(selectedState);
+                } else {
+                    // Remove state if present
+                    statesArray.splice(stateIndex, 1);
+                }
+                
+                // Update table with new value
+                if (statesArray.length === 0) {
+                    table[rowIdx][colIdx] = '';
+                } else if (statesArray.length === 1) {
+                    table[rowIdx][colIdx] = statesArray[0];
+                } else {
+                    table[rowIdx][colIdx] = statesArray;
+                }
+            }
         }
     }
 
@@ -240,28 +274,20 @@
                     <div class="transition-table">
                         <h3>Transition Table</h3>
                         <p class="table-help">
-                            Click a state to select it, then click cells to set transitions. Scroll
-                            on states to change their type.
+                            Click a state to select it, then click cells to toggle transitions. Click the same cell multiple times to add/remove states (for NFA). Scroll on states to change their type.
                         </p>
 
                         <table>
                             <thead>
                                 <tr>
                                     <th class="state-header">δ</th>
-                                    <th
-                                        class="symbol-header"
-                                        class:selected={selectedState === 'ε'}
-                                        on:click={() => handleStateSelect('ε')}
-                                    >
-                                        ε
-                                    </th>
                                     {#each alphabet.split(',').map((s) => s.trim()) as symbol}
                                         <th
                                             class="symbol-header"
                                             class:selected={selectedState === symbol}
                                             on:click={() => handleStateSelect(symbol)}
                                         >
-                                            {symbol}
+                                            {symbol === '@e' ? 'ε' : symbol}
                                         </th>
                                     {/each}
                                 </tr>
@@ -276,12 +302,6 @@
                                             on:wheel|preventDefault={(e) => cycleStateType(state)}
                                         >
                                             {state}
-                                        </td>
-                                        <td
-                                            class="transition-cell"
-                                            on:click={() => handleCellClick(rowIdx, -1)}
-                                        >
-                                            ∅
                                         </td>
                                         {#each alphabet
                                             .split(',')
