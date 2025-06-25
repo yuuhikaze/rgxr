@@ -115,11 +115,11 @@ export class APIClient {
     }
 
     // Union multiple FAs
-    async union(uuids: string[]): Promise<FA> {
-        const response = await fetch(`${this.baseURL}/api/union`, {
+    async boolean(uuids: string[], mode: string): Promise<FA> {
+        const response = await fetch(`${this.baseURL}/api/boolean`, {
             method: 'POST',
             headers: this.authHeaders(),
-            body: JSON.stringify({ uuids })
+            body: JSON.stringify({ uuids: uuids, mode: mode })
         });
 
         if (!response.ok) {

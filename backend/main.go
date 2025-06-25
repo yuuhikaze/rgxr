@@ -11,8 +11,7 @@ func main() {
 	r := mux.NewRouter()
 
 	// Operation endpoints
-	r.HandleFunc("/union", handlers.BooleanHandler).Methods("POST")
-	r.HandleFunc("/intersection", handlers.BooleanHandler).Methods("POST")
+	r.HandleFunc("/boolean", handlers.BooleanHandler).Methods("POST")
 	r.HandleFunc("/concatenation", handlers.ConcatenationHandler).Methods("POST")
 	r.HandleFunc("/complement", handlers.ComplementHandler).Methods("GET")
 	r.HandleFunc("/minimize-dfa", handlers.MinimizeDFAHandler).Methods("GET")
@@ -28,8 +27,7 @@ func main() {
 
 	log.Println("Backend running on :8080")
 	log.Println("Available endpoints:")
-	log.Println("  POST /union - Union of multiple FAs")
-	log.Println("  POST /intersection - Intersection of multiple FAs")
+	log.Println("  POST /boolean - Union/Intersection of multiple FAs")
 	log.Println("  POST /concatenation - Concatenation of multiple FAs")
 	log.Println("  GET  /complement?uuid=<uuid> - Complement of FA")
 	log.Println("  GET  /minimize-dfa?uuid=<uuid> - Minimize DFA")

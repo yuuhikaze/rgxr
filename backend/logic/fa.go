@@ -26,7 +26,7 @@ type FA struct {
 // PerformBoolean applies a boolean operation to multiple FAs and returns the resulting FA.
 func PerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 	if len(fas) < 2 {
-		return nil, fmt.Errorf("need at least two FAs for intersection")
+		return nil, fmt.Errorf("need at least two FAs for %s", mode)
 	}
 
 	// Verify all alphabets are identical
@@ -68,13 +68,14 @@ func PerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 	}
 	newInitial := strings.Join(initialParts, "|")
 
-	// Acceptance states
+	// Acceptance states - FIXED LOGIC
 	newAcceptance := []string{}
 	for _, state := range newStates {
 		parts := strings.Split(state, "|")
 		if len(parts) == len(fas) {
 			switch mode {
 			case Intersection:
+				// For intersection: accept if ALL component states are accepting
 				all := true
 				for i, part := range parts {
 					if !Contains(fas[i].Acceptance, part) {
@@ -86,11 +87,16 @@ func PerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 					newAcceptance = append(newAcceptance, state)
 				}
 			case Union:
+				// For union: accept if ANY component state is accepting
+				any := false
 				for i, part := range parts {
 					if Contains(fas[i].Acceptance, part) {
-						newAcceptance = append(newAcceptance, state)
+						any = true
 						break
 					}
+				}
+				if any {
+					newAcceptance = append(newAcceptance, state)
 				}
 			}
 		}

@@ -29,7 +29,7 @@
                     if (selectedIds.length < 2) {
                         throw new Error('Union requires at least 2 FAs');
                     }
-                    result = await api.union(selectedIds);
+                    result = await api.boolean(selectedIds, 'union');
                     onResult(result);
                     break;
 
@@ -37,12 +37,7 @@
                     if (selectedIds.length < 2) {
                         throw new Error('Intersection requires at least 2 FAs');
                     }
-                    const intersectionResponse = await fetch('/api/intersection', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uuids: selectedIds, mode: 'intersection' })
-                    });
-                    result = await intersectionResponse.json();
+                    result = await api.boolean(selectedIds, 'intersection');
                     onResult(result);
                     break;
 
