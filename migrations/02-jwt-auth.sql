@@ -204,7 +204,7 @@ BEGIN
             SELECT
                 _role AS role,
                 login.email AS email,
-                extract(epoch FROM now())::integer + 60 * 60 AS exp) r INTO token;
+                extract(epoch FROM now())::integer + 60 * 60 * 24 AS exp) r INTO token;
 END;
 $$
 LANGUAGE plpgsql
