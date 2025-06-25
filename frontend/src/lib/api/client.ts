@@ -29,10 +29,9 @@ export class APIClient {
         this.baseURL = baseURL;
     }
 
-    async setEditorToken() {
-        // change this later
-        const email = 'editor@example.com';
-        const pass = 'securepassword';
+    async setEditorToken() { // change this later
+        const email = 'editor@example.com'
+        const pass = 'securepassword'
         const res = await fetch(`${this.baseURL}/pgapi/rpc/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -48,7 +47,7 @@ export class APIClient {
     }
 
     private authHeaders(): HeadersInit {
-        console.log('YO TOKEN: ' + this.token);
+        console.log("YO TOKEN: "+this.token)
         const headers: HeadersInit = {
             'Content-Type': 'application/json'
         };

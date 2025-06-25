@@ -188,6 +188,15 @@ func combineBooleanStates(nextParts []any) any {
 
 // NFAToDFA converts an NFA to DFA using subset construction
 func NFAToDFA(nfa *FA) (*FA, error) {
+	// Find epsilon symbol index
+	epsilonIdx := -1
+	for i, symbol := range nfa.Alphabet {
+		if symbol == "@e" {
+			epsilonIdx = i
+			break
+		}
+	}
+
 	// Helper function to compute epsilon closure
 	epsilonClosure := func(states []string) []string {
 		closure := make(map[string]bool)
@@ -199,12 +208,46 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 		}
 
 		for len(stack) > 0 {
-			// current := stack[len(stack)-1]
+			current := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 
-			// Find epsilon transitions (assuming epsilon is represented as empty string or special symbol)
-			// This implementation assumes no explicit epsilon transitions in your format
-			// If you have epsilon transitions, you'd need to handle them here
+			// Find epsilon transitions if epsilon symbol exists
+			if epsilonIdx >= 0 {
+				stateIdx := -1
+				for i, s := range nfa.States {
+					if s == current {
+						stateIdx = i
+						break
+					}
+				}
+
+				if stateIdx >= 0 && stateIdx < len(nfa.Transitions) &&
+					epsilonIdx < len(nfa.Transitions[stateIdx]) {
+					next := nfa.Transitions[stateIdx][epsilonIdx]
+
+					switch v := next.(type) {
+					case string:
+						if v != "" && v != "@v" && !closure[v] {
+							closure[v] = true
+							stack = append(stack, v)
+						}
+					case []string:
+						for _, ns := range v {
+							if ns != "" && ns != "@v" && !closure[ns] {
+								closure[ns] = true
+								stack = append(stack, ns)
+							}
+						}
+					case []any:
+						for _, item := range v {
+							if s, ok := item.(string); ok && s != "" && s != "@v" && !closure[s] {
+								closure[s] = true
+								stack = append(stack, s)
+							}
+						}
+					}
+				}
+			}
 		}
 
 		result := make([]string, 0, len(closure))
@@ -240,7 +283,13 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 
 		row := make([]any, len(nfa.Alphabet))
 
-		for symbolIdx := range nfa.Alphabet {
+		for symbolIdx, symbol := range nfa.Alphabet {
+			// Skip epsilon transitions in DFA construction
+			if symbol == "@e" {
+				row[symbolIdx] = "@v"
+				continue
+			}
+
 			// Compute next state set
 			nextStates := make(map[string]bool)
 
@@ -259,18 +308,18 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 
 					switch v := next.(type) {
 					case string:
-						if v != "@v" {
+						if v != "" && v != "@v" {
 							nextStates[v] = true
 						}
 					case []string:
 						for _, ns := range v {
-							if ns != "@v" {
+							if ns != "" && ns != "@v" {
 								nextStates[ns] = true
 							}
 						}
 					case []any:
 						for _, item := range v {
-							if s, ok := item.(string); ok && s != "@v" {
+							if s, ok := item.(string); ok && s != "" && s != "@v" {
 								nextStates[s] = true
 							}
 						}

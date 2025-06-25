@@ -19,6 +19,7 @@ func main() {
 	r.HandleFunc("/fa-to-regex", handlers.FAToRegexHandler).Methods("GET")
 	r.HandleFunc("/regex-to-nfa", handlers.RegexToNFAHandler).Methods("POST")
 	r.HandleFunc("/nfa-to-dfa", handlers.NFAToDFAHandler).Methods("GET")
+	r.HandleFunc("/run-string", handlers.RunStringHandler).Methods("POST")
 
 	// Storage endpoints
 	r.HandleFunc("/tex/{uuid}", handlers.GetTeXHandler).Methods("GET")
@@ -35,6 +36,7 @@ func main() {
 	log.Println("  GET  /fa-to-regex?uuid=<uuid> - Convert FA to regex")
 	log.Println("  POST /regex-to-nfa - Convert regex to NFA")
 	log.Println("  GET  /nfa-to-dfa?uuid=<uuid> - Convert NFA to DFA")
+	log.Println("  POST /run-string - Run a string through an FA")
 	log.Println("  POST /render - Render FA to SVG")
 	log.Println("  GET  /tex/{uuid} - Get saved TeX file")
 	log.Println("  GET  /svg/{uuid} - Get saved SVG file")

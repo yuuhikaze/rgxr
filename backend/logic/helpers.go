@@ -58,20 +58,20 @@ func uniqueStrings(arr []string) []string {
 
 // interfaceToStateSlice converts any to []string
 func interfaceToStateSlice(next any) []string {
-	if next == "@v" || next == nil {
+	if next == "@v" || next == nil || next == "" {
 		return []string{}
 	}
 
 	switch v := next.(type) {
 	case string:
-		if v == "@v" {
+		if v == "@v" || v == "" {
 			return []string{}
 		}
 		return []string{v}
 	case []string:
 		var result []string
 		for _, s := range v {
-			if s != "@v" {
+			if s != "@v" && s != "" {
 				result = append(result, s)
 			}
 		}
@@ -79,7 +79,7 @@ func interfaceToStateSlice(next any) []string {
 	case []any:
 		var result []string
 		for _, item := range v {
-			if s, ok := item.(string); ok && s != "@v" {
+			if s, ok := item.(string); ok && s != "@v" && s != "" {
 				result = append(result, s)
 			}
 		}
