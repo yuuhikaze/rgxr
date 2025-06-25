@@ -134,10 +134,10 @@
         selectedCell = { row: rowIdx, col: colIdx };
         if (selectedState) {
             if (!table[rowIdx]) table[rowIdx] = [];
-            
+
             // Get current cell value
             const currentValue = table[rowIdx][colIdx];
-            
+
             // If cell is empty, add the selected state
             if (!currentValue || currentValue === '') {
                 table[rowIdx][colIdx] = selectedState;
@@ -149,7 +149,7 @@
                 } else {
                     statesArray = [currentValue];
                 }
-                
+
                 // Toggle the selected state
                 const stateIndex = statesArray.indexOf(selectedState);
                 if (stateIndex === -1) {
@@ -159,7 +159,7 @@
                     // Remove state if present
                     statesArray.splice(stateIndex, 1);
                 }
-                
+
                 // Update table with new value
                 if (statesArray.length === 0) {
                     table[rowIdx][colIdx] = '';
@@ -250,16 +250,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="alphabet">Alphabet</label>
-                        <input
-                            id="alphabet"
-                            class="form-input"
-                            placeholder="0, 1, @e"
-                            bind:value={alphabet}
-                        />
-                    </div>
-
-                    <div class="form-group">
                         <label for="states">States</label>
                         <input
                             id="states"
@@ -268,13 +258,25 @@
                             bind:value={states}
                         />
                     </div>
+
+                    <div class="form-group">
+                        <label for="alphabet">Alphabet</label>
+                        <input
+                            id="alphabet"
+                            class="form-input"
+                            placeholder="0, 1, @e"
+                            bind:value={alphabet}
+                        />
+                    </div>
                 </div>
 
                 {#if alphabet && states}
                     <div class="transition-table">
                         <h3>Transition Table</h3>
                         <p class="table-help">
-                            Click a state to select it, then click cells to toggle transitions. Click the same cell multiple times to add/remove states (for NFA). Scroll on states to change their type.
+                            Click a state to select it, then click cells to toggle transitions.
+                            Click the same cell multiple times to add/remove states (for NFA).
+                            Scroll on states to change their type.
                         </p>
 
                         <table>
