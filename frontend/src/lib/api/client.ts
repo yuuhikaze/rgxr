@@ -47,7 +47,7 @@ export class APIClient {
     }
 
     private authHeaders(): HeadersInit {
-        console.log("YO TOKEN: "+this.token)
+        console.log("YO TOKEN: " + this.token)
         const headers: HeadersInit = {
             'Content-Type': 'application/json'
         };
@@ -185,6 +185,21 @@ export class APIClient {
 
         if (!response.ok) {
             throw new Error(`NFA to DFA conversion failed: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
+    // Run a string through an FA
+    async runString(uuid: string, input: string): Promise<{ accepted: boolean; path: string[] }> {
+        const response = await fetch(`${this.baseURL}/api/run-string`, {
+            method: 'POST',
+            headers: this.authHeaders(),
+            body: JSON.stringify({ uuid, string: input })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Run string failed: ${response.statusText}`);
         }
 
         return response.json();
