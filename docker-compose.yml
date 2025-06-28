@@ -48,7 +48,8 @@ services:
       - traefik.http.middlewares.strip-pgapi.stripprefix.prefixes=/pgapi
       - traefik.http.routers.postgrest.middlewares=strip-pgapi
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - rgxr-net
       - proxy # testing
@@ -58,7 +59,8 @@ services:
       context: ./backend
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - rgxr-data:/data
     networks:
@@ -71,6 +73,11 @@ services:
       - traefik.http.services.backend.loadbalancer.server.port=8080
       - traefik.http.middlewares.strip-backendapi.stripprefix.prefixes=/api
       - traefik.http.routers.backend.middlewares=strip-backendapi
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -84,8 +91,10 @@ services:
       - traefik.http.routers.frontend.entrypoints=web
       - traefik.http.services.frontend.loadbalancer.server.port=80
     depends_on:
-      - postgrest
-      - backend
+      postgrest:
+        condition: service_started
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

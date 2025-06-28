@@ -25,6 +25,8 @@ func main() {
 	r.HandleFunc("/svg/{uuid}", handlers.GetSVGHandler).Methods("GET")
 	r.HandleFunc("/render", handlers.RenderHandler).Methods("POST")
 
+	r.HandleFunc("/live", handlers.LiveHandler).Methods("GET")
+
 	log.Println("Backend running on :8080")
 	log.Println("Available endpoints:")
 	log.Println("  POST /boolean - Union/Intersection of multiple FAs")

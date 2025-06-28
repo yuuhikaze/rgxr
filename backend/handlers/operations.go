@@ -1,4 +1,3 @@
-// extended_handlers.go
 package handlers
 
 import (
