@@ -114,9 +114,24 @@ export class APIClient {
         return results[0];
     }
 
-    // Union multiple FAs
+    // Deterministic boolean over multiple FAs
     async boolean(uuids: string[], mode: string): Promise<FA> {
         const response = await fetch(`${this.baseURL}/api/boolean`, {
+            method: 'POST',
+            headers: this.authHeaders(),
+            body: JSON.stringify({ uuids: uuids, mode: mode })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Union failed: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
+    // Non-deterministic boolean over multiple FAs
+    async nboolean(uuids: string[], mode: string): Promise<FA> {
+        const response = await fetch(`${this.baseURL}/api/n-boolean`, {
             method: 'POST',
             headers: this.authHeaders(),
             body: JSON.stringify({ uuids: uuids, mode: mode })

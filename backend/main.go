@@ -12,6 +12,7 @@ func main() {
 
 	// Operation endpoints
 	r.HandleFunc("/boolean", handlers.BooleanHandler).Methods("POST")
+	r.HandleFunc("/n-boolean", handlers.NBooleanHandler).Methods("POST")
 	r.HandleFunc("/concatenation", handlers.ConcatenationHandler).Methods("POST")
 	r.HandleFunc("/complement", handlers.ComplementHandler).Methods("GET")
 	r.HandleFunc("/minimize-dfa", handlers.MinimizeDFAHandler).Methods("GET")
@@ -29,7 +30,8 @@ func main() {
 
 	log.Println("Backend running on :8080")
 	log.Println("Available endpoints:")
-	log.Println("  POST /boolean - Union/Intersection of multiple FAs")
+	log.Println("  POST /boolean - Deterministic union/intersection of multiple FAs")
+	log.Println("  POST /n-boolean - Non-deterministic union/intersection of multiple FAs")
 	log.Println("  POST /concatenation - Concatenation of multiple FAs")
 	log.Println("  GET  /complement?uuid=<uuid> - Complement of FA")
 	log.Println("  GET  /minimize-dfa?uuid=<uuid> - Minimize DFA")

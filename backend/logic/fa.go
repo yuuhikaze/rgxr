@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 )
@@ -148,6 +149,117 @@ func PerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 		}
 		newTransitions[i] = row
 	}
+
+	return &FA{
+		Alphabet:    baseAlphabet,
+		States:      newStates,
+		Initial:     newInitial,
+		Acceptance:  newAcceptance,
+		Transitions: newTransitions,
+	}, nil
+}
+
+// NPerformBoolean applies a non-deterministic boolean operation to multiple FAs and returns the resulting FA.
+func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
+	if len(fas) < 2 {
+		return nil, fmt.Errorf("need at least two FAs for %s", mode)
+	}
+
+	// Verify all alphabets are identical
+	baseAlphabet := fas[0].Alphabet
+	for i := 1; i < len(fas); i++ {
+		if len(fas[i].Alphabet) != len(baseAlphabet) {
+			return nil, fmt.Errorf("alphabets differ")
+		}
+		for j := range baseAlphabet {
+			if fas[i].Alphabet[j] != baseAlphabet[j] {
+				return nil, fmt.Errorf("alphabets differ")
+			}
+		}
+	}
+
+	var newStates []string
+	var newInitial string
+	var newAcceptance []string
+	var newTransitions [][]any
+
+	switch mode {
+	case Union:
+		// Create a new initial state
+		newInitial = "S"
+		newStates = []string{newInitial}
+		
+		// Add all states from all FAs without renaming
+		for _, fa := range fas {
+			newStates = append(newStates, fa.States...)
+		}
+
+		// Find epsilon symbol index or add it if it doesn't exist
+		epsilonIdx := -1
+		for i, symbol := range baseAlphabet {
+			if symbol == "@e" {
+				epsilonIdx = i
+				break
+			}
+		}
+		
+		// If epsilon doesn't exist, add it to the alphabet
+		if epsilonIdx == -1 {
+			baseAlphabet = append(baseAlphabet, "@e")
+			epsilonIdx = len(baseAlphabet) - 1
+		}
+
+		// Build transitions
+		newTransitions = make([][]any, len(newStates))
+		
+		// Initial state transitions: epsilon to all FA initial states
+		initialRow := make([]any, len(baseAlphabet))
+		for j := range baseAlphabet {
+			if j == epsilonIdx {
+				// Epsilon transitions to all FA initial states
+				epsilonTargets := make([]string, len(fas))
+				for faIdx, fa := range fas {
+					epsilonTargets[faIdx] = fa.Initial
+				}
+				initialRow[j] = epsilonTargets
+			} else {
+				initialRow[j] = "@v"
+			}
+		}
+		newTransitions[0] = initialRow
+
+		// Copy transitions from all FAs
+		stateIndex := 1
+		for _, fa := range fas {
+			for i := range fa.States {
+				row := make([]any, len(baseAlphabet))
+				for j := range baseAlphabet {
+					if j < len(fa.Transitions[i]) {
+						originalNext := fa.Transitions[i][j]
+						row[j] = originalNext
+					} else {
+						// New epsilon column for existing FAs
+						row[j] = "@v"
+					}
+				}
+				newTransitions[stateIndex] = row
+				stateIndex++
+			}
+		}
+
+		// Acceptance states are all acceptance states from all FAs
+		for _, fa := range fas {
+			newAcceptance = append(newAcceptance, fa.Acceptance...)
+		}
+	}
+	
+	log.Print(&FA{
+		Alphabet:    baseAlphabet,
+		States:      newStates,
+		Initial:     newInitial,
+		Acceptance:  newAcceptance,
+		Transitions: newTransitions,
+	});
 
 	return &FA{
 		Alphabet:    baseAlphabet,

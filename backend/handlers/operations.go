@@ -14,7 +14,7 @@ type BooleanRequest struct {
 	Mode  logic.BooleanMode `json:"mode"`
 }
 
-// BooleanHandler handles intersection of multiple FAs
+// BooleanHandler handles deterministic boolean operations of multiple FAs
 func BooleanHandler(w http.ResponseWriter, r *http.Request) {
 	var req BooleanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -40,6 +40,41 @@ func BooleanHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Perform boolean operation
 	result, err := logic.PerformBoolean(automata, req.Mode)
+	if err != nil {
+		http.Error(w, "Boolean error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+// NBooleanHandler handles non-deterministic boolean operations of multiple FAs
+func NBooleanHandler(w http.ResponseWriter, r *http.Request) {
+	var req BooleanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(req.UUIDs) < 2 {
+		http.Error(w, fmt.Sprintf("Need at least two FAs for %s", req.Mode), http.StatusBadRequest)
+		return
+	}
+
+	// Load FAs from PostgREST API
+	var automata []*logic.FA
+	for _, uuid := range req.UUIDs {
+		fa, err := loadFAFromAPI(uuid)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error loading FA %s: %v", uuid, err), http.StatusInternalServerError)
+			return
+		}
+		automata = append(automata, fa)
+	}
+
+	// Perform boolean operation
+	result, err := logic.NPerformBoolean(automata, req.Mode)
 	if err != nil {
 		http.Error(w, "Boolean error: "+err.Error(), http.StatusInternalServerError)
 		return

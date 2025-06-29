@@ -27,15 +27,23 @@
             switch (operation) {
                 case 'union':
                     if (selectedIds.length < 2) {
-                        throw new Error('Union requires at least 2 FAs');
+                        throw new Error('Deterministic union requires at least 2 FAs');
                     }
                     result = await api.boolean(selectedIds, 'union');
                     onResult(result);
                     break;
 
+                case 'n-union':
+                    if (selectedIds.length < 2) {
+                        throw new Error('Non-deterministic union requires at least 2 FAs');
+                    }
+                    result = await api.nboolean(selectedIds, 'union');
+                    onResult(result);
+                    break;
+
                 case 'intersection':
                     if (selectedIds.length < 2) {
-                        throw new Error('Intersection requires at least 2 FAs');
+                        throw new Error('Deterministic intersection requires at least 2 FAs');
                     }
                     result = await api.boolean(selectedIds, 'intersection');
                     onResult(result);
@@ -127,24 +135,24 @@
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
-        <button 
+        <button
             class="tab-button"
             class:active={activeTab === 'unary'}
-            on:click={() => activeTab = 'unary'}
+            on:click={() => (activeTab = 'unary')}
         >
             Unary Ops
         </button>
-        <button 
+        <button
             class="tab-button"
             class:active={activeTab === 'binary'}
-            on:click={() => activeTab = 'binary'}
+            on:click={() => (activeTab = 'binary')}
         >
             Binary Ops
         </button>
-        <button 
+        <button
             class="tab-button"
             class:active={activeTab === 'regex'}
-            on:click={() => activeTab = 'regex'}
+            on:click={() => (activeTab = 'regex')}
         >
             Regex/String
         </button>
@@ -191,6 +199,13 @@
                     disabled={loading || selectedIds.length < 2}
                 >
                     Union (∪)
+                </button>
+
+                <button
+                    on:click={() => performOperation('n-union')}
+                    disabled={loading || selectedIds.length < 2}
+                >
+                    N-Union (∪)
                 </button>
 
                 <button
@@ -245,10 +260,17 @@
                             Run
                         </button>
                     </div>
-                    
+
                     {#if runResult}
-                        <div class="run-result" class:accepted={runResult.accepted} class:rejected={!runResult.accepted}>
-                            <p><strong>Result:</strong> {runResult.accepted ? 'Accepted' : 'Rejected'}</p>
+                        <div
+                            class="run-result"
+                            class:accepted={runResult.accepted}
+                            class:rejected={!runResult.accepted}
+                        >
+                            <p>
+                                <strong>Result:</strong>
+                                {runResult.accepted ? 'Accepted' : 'Rejected'}
+                            </p>
                             <p><strong>Path:</strong> {runResult.path.join(' → ')}</p>
                         </div>
                     {/if}
@@ -274,7 +296,8 @@
         margin-bottom: 1rem;
     }
 
-    h3, h4 {
+    h3,
+    h4 {
         margin: 0 0 0.5rem 0;
     }
 
@@ -436,12 +459,12 @@
         .operations-panel {
             padding: 0.75rem;
         }
-        
+
         .tab-button {
             padding: 0.5rem 0.75rem;
             font-size: 0.8rem;
         }
-        
+
         .operations-grid button {
             padding: 0.5rem 0.75rem;
             font-size: 0.8rem;
