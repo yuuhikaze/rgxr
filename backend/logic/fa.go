@@ -3,6 +3,7 @@ package logic
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -260,6 +261,115 @@ func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 		Acceptance:  newAcceptance,
 		Transitions: newTransitions,
 	});
+
+	return &FA{
+		Alphabet:    baseAlphabet,
+		States:      newStates,
+		Initial:     newInitial,
+		Acceptance:  newAcceptance,
+		Transitions: newTransitions,
+	}, nil
+}
+
+// Concatenation creates an NFA representing the concatenation of multiple NFAs
+func Concatenation(fas []*FA) (*FA, error) {
+	if len(fas) == 0 {
+		return nil, fmt.Errorf("need at least one FA for concatenation")
+	}
+	if len(fas) == 1 {
+		return fas[0], nil
+	}
+
+	// Verify all alphabets are identical
+	baseAlphabet := fas[0].Alphabet
+	for i := 1; i < len(fas); i++ {
+		if len(fas[i].Alphabet) != len(baseAlphabet) {
+			return nil, fmt.Errorf("alphabets differ")
+		}
+		for j := range baseAlphabet {
+			if fas[i].Alphabet[j] != baseAlphabet[j] {
+				return nil, fmt.Errorf("alphabets differ")
+			}
+		}
+	}
+
+	// Collect all states from all FAs without renaming
+	var newStates []string
+	for _, fa := range fas {
+		newStates = append(newStates, fa.States...)
+	}
+
+	// Find epsilon symbol index or add it if it doesn't exist
+	epsilonIdx := -1
+	for i, symbol := range baseAlphabet {
+		if symbol == "@e" {
+			epsilonIdx = i
+			break
+		}
+	}
+	
+	// If epsilon doesn't exist, add it to the alphabet
+	if epsilonIdx == -1 {
+		baseAlphabet = append(baseAlphabet, "@e")
+		epsilonIdx = len(baseAlphabet) - 1
+	}
+
+	// Build transitions
+	newTransitions := make([][]any, len(newStates))
+	stateIndex := 0
+
+	for faIdx, fa := range fas {
+		for i, state := range fa.States {
+			row := make([]any, len(baseAlphabet))
+			
+			for j := range baseAlphabet {
+				if j < len(fa.Transitions[i]) {
+					originalNext := fa.Transitions[i][j]
+					row[j] = originalNext
+				} else {
+					// New epsilon column for existing FAs
+					row[j] = "@v"
+				}
+			}
+
+			// If this is an accepting state and not the last FA,
+			// add epsilon transition to next FA's initial state
+			isAccepting := Contains(fa.Acceptance, state)
+			isLastFA := faIdx == len(fas)-1
+
+			if isAccepting && !isLastFA && epsilonIdx >= 0 {
+				nextFAInitial := fas[faIdx+1].Initial
+				
+				// Handle existing epsilon transitions
+				if row[epsilonIdx] == "@v" {
+					row[epsilonIdx] = nextFAInitial
+				} else {
+					// Combine with existing epsilon transitions
+					switch v := row[epsilonIdx].(type) {
+					case string:
+						if v != nextFAInitial {
+							row[epsilonIdx] = []string{v, nextFAInitial}
+						}
+					case []string:
+						found := slices.Contains(v, nextFAInitial)
+						if !found {
+							row[epsilonIdx] = append(v, nextFAInitial)
+						}
+					}
+				}
+			}
+
+			newTransitions[stateIndex] = row
+			stateIndex++
+		}
+	}
+
+	// Initial state is the first FA's initial state
+	newInitial := fas[0].Initial
+
+	// Acceptance states are only from the last FA
+	lastFAIdx := len(fas) - 1
+	newAcceptance := append([]string{}, fas[lastFAIdx].Acceptance...)
 
 	return &FA{
 		Alphabet:    baseAlphabet,
@@ -538,122 +648,6 @@ func Complement(fa *FA) *FA {
 		Acceptance:  newAcceptance,
 		Transitions: newTransitions,
 	}
-}
-
-// Concatenation creates an FA representing the concatenation of multiple FAs
-func Concatenation(fas []*FA) (*FA, error) {
-	if len(fas) == 0 {
-		return nil, fmt.Errorf("need at least one FA for concatenation")
-	}
-	if len(fas) == 1 {
-		return fas[0], nil
-	}
-
-	// Verify all alphabets are identical
-	baseAlphabet := fas[0].Alphabet
-	for i := 1; i < len(fas); i++ {
-		if len(fas[i].Alphabet) != len(baseAlphabet) {
-			return nil, fmt.Errorf("alphabets differ")
-		}
-		for j := range baseAlphabet {
-			if fas[i].Alphabet[j] != baseAlphabet[j] {
-				return nil, fmt.Errorf("alphabets differ")
-			}
-		}
-	}
-
-	// Rename states to avoid conflicts
-	allStates := []string{}
-	stateMapping := make([]map[string]string, len(fas))
-
-	for faIdx, fa := range fas {
-		stateMapping[faIdx] = make(map[string]string)
-		for _, state := range fa.States {
-			newName := fmt.Sprintf("fa%d_%s", faIdx, state)
-			stateMapping[faIdx][state] = newName
-			allStates = append(allStates, newName)
-		}
-	}
-
-	// Build concatenated transitions
-	allTransitions := make([][]any, len(allStates))
-	stateIndex := 0
-
-	for faIdx, fa := range fas {
-		for i, state := range fa.States {
-			row := make([]any, len(baseAlphabet))
-
-			for j := range baseAlphabet {
-				originalNext := fa.Transitions[i][j]
-
-				// If this is an accepting state and not the last FA,
-				// add epsilon transitions to next FA's initial state
-				isAccepting := Contains(fa.Acceptance, state)
-				isLastFA := faIdx == len(fas)-1
-
-				switch v := originalNext.(type) {
-				case string:
-					if v == "@v" {
-						if isAccepting && !isLastFA {
-							// Add transition to next FA's initial state
-							nextFAInitial := stateMapping[faIdx+1][fas[faIdx+1].Initial]
-							row[j] = nextFAInitial
-						} else {
-							row[j] = "@v"
-						}
-					} else {
-						row[j] = stateMapping[faIdx][v]
-					}
-				case []string:
-					newNext := []string{}
-					for _, next := range v {
-						if next != "@v" {
-							newNext = append(newNext, stateMapping[faIdx][next])
-						}
-					}
-					if isAccepting && !isLastFA {
-						nextFAInitial := stateMapping[faIdx+1][fas[faIdx+1].Initial]
-						newNext = append(newNext, nextFAInitial)
-					}
-
-					if len(newNext) == 0 {
-						row[j] = "@v"
-					} else if len(newNext) == 1 {
-						row[j] = newNext[0]
-					} else {
-						row[j] = uniqueStrings(newNext)
-					}
-				default:
-					if isAccepting && !isLastFA {
-						nextFAInitial := stateMapping[faIdx+1][fas[faIdx+1].Initial]
-						row[j] = nextFAInitial
-					} else {
-						row[j] = "@v"
-					}
-				}
-			}
-			allTransitions[stateIndex] = row
-			stateIndex++
-		}
-	}
-
-	// Initial state is the first FA's initial state
-	newInitial := stateMapping[0][fas[0].Initial]
-
-	// Acceptance states are only from the last FA
-	lastFAIdx := len(fas) - 1
-	newAcceptance := []string{}
-	for _, acceptState := range fas[lastFAIdx].Acceptance {
-		newAcceptance = append(newAcceptance, stateMapping[lastFAIdx][acceptState])
-	}
-
-	return &FA{
-		Alphabet:    baseAlphabet,
-		States:      allStates,
-		Initial:     newInitial,
-		Acceptance:  newAcceptance,
-		Transitions: allTransitions,
-	}, nil
 }
 
 // MinimizeDFA minimizes a DFA using table-filling algorithm
