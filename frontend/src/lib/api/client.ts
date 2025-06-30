@@ -161,18 +161,14 @@ export class APIClient {
 
     // Convert FA to regular expression
     async faToRegex(uuid: string): Promise<string> {
-        const response = await fetch(`${this.baseURL}/api/fa-to-regex`, {
-            method: 'POST',
-            headers: this.authHeaders(),
-            body: JSON.stringify({ uuid })
-        });
+        const response = await fetch(`/api/fa-to-regex?uuid=${uuid}`);
 
         if (!response.ok) {
             throw new Error(`FA to regex conversion failed: ${response.statusText}`);
         }
 
-        const result = await response.json();
-        return result.regex;
+        const result = await response.text();
+        return result;
     }
 
     // Convert regular expression to NFA
