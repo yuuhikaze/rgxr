@@ -64,7 +64,7 @@ func TikZToSVG(tikz string) (string, error) {
 	}
 
 	// Log the TikZ input for debugging
-	log.Printf("TikZ input being processed:\n%s\n", tikz)
+	// log.Printf("TikZ input being processed:\n%s\n", tikz)
 
 	// Compile with pdflatex
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

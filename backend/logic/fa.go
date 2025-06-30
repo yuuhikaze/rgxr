@@ -189,7 +189,7 @@ func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 		// Create a new initial state
 		newInitial = "S"
 		newStates = []string{newInitial}
-		
+
 		// Add all states from all FAs without renaming
 		for _, fa := range fas {
 			newStates = append(newStates, fa.States...)
@@ -203,7 +203,7 @@ func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 				break
 			}
 		}
-		
+
 		// If epsilon doesn't exist, add it to the alphabet
 		if epsilonIdx == -1 {
 			baseAlphabet = append(baseAlphabet, "@e")
@@ -212,7 +212,7 @@ func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 
 		// Build transitions
 		newTransitions = make([][]any, len(newStates))
-		
+
 		// Initial state transitions: epsilon to all FA initial states
 		initialRow := make([]any, len(baseAlphabet))
 		for j := range baseAlphabet {
@@ -253,14 +253,14 @@ func NPerformBoolean(fas []*FA, mode BooleanMode) (*FA, error) {
 			newAcceptance = append(newAcceptance, fa.Acceptance...)
 		}
 	}
-	
+
 	log.Print(&FA{
 		Alphabet:    baseAlphabet,
 		States:      newStates,
 		Initial:     newInitial,
 		Acceptance:  newAcceptance,
 		Transitions: newTransitions,
-	});
+	})
 
 	return &FA{
 		Alphabet:    baseAlphabet,
@@ -307,7 +307,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 			break
 		}
 	}
-	
+
 	// If epsilon doesn't exist, add it to the alphabet
 	if epsilonIdx == -1 {
 		baseAlphabet = append(baseAlphabet, "@e")
@@ -321,7 +321,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 	for faIdx, fa := range fas {
 		for i, state := range fa.States {
 			row := make([]any, len(baseAlphabet))
-			
+
 			for j := range baseAlphabet {
 				if j < len(fa.Transitions[i]) {
 					originalNext := fa.Transitions[i][j]
@@ -339,7 +339,7 @@ func Concatenation(fas []*FA) (*FA, error) {
 
 			if isAccepting && !isLastFA && epsilonIdx >= 0 {
 				nextFAInitial := fas[faIdx+1].Initial
-				
+
 				// Handle existing epsilon transitions
 				if row[epsilonIdx] == "@v" {
 					row[epsilonIdx] = nextFAInitial
@@ -650,106 +650,247 @@ func Complement(fa *FA) *FA {
 	}
 }
 
-// MinimizeDFA minimizes a DFA using table-filling algorithm
+// MinimizeDFA minimizes a DFA using Hopcroft's algorithm
 func MinimizeDFA(dfa *FA) (*FA, error) {
 	n := len(dfa.States)
 	if n <= 1 {
 		return dfa, nil
 	}
 
-	// Create distinguishability table
-	distinguishable := make([][]bool, n)
-	for i := range distinguishable {
-		distinguishable[i] = make([]bool, n)
-	}
+	log.Print(dfa)
+	log.Print("==============")
 
-	// Mark pairs where one is accepting and other is not
-	for i := range n {
-		for j := i + 1; j < n; j++ {
-			state1 := dfa.States[i]
-			state2 := dfa.States[j]
+	// First, remove inaccessible states
+	accessible := make(map[string]bool)
+	queue := []string{dfa.Initial}
+	accessible[dfa.Initial] = true
 
-			isAccepting1 := Contains(dfa.Acceptance, state1)
-			isAccepting2 := Contains(dfa.Acceptance, state2)
+	// BFS to find all accessible states
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
 
-			if isAccepting1 != isAccepting2 {
-				distinguishable[i][j] = true
-				distinguishable[j][i] = true
-			}
+		currentIdx := getStateIndex(dfa, current)
+		if currentIdx == -1 || currentIdx >= len(dfa.Transitions) {
+			continue
 		}
-	}
 
-	// Iteratively mark distinguishable pairs
-	changed := true
-	for changed {
-		changed = false
-		for i := range n {
-			for j := i + 1; j < n; j++ {
-				if !distinguishable[i][j] {
-					// Check if states i and j are distinguishable
-					for symbolIdx := range dfa.Alphabet {
-						next1 := getNextState(dfa, dfa.States[i], symbolIdx)
-						next2 := getNextState(dfa, dfa.States[j], symbolIdx)
-
-						// Convert to state indices
-						idx1 := getStateIndex(dfa, next1)
-						idx2 := getStateIndex(dfa, next2)
-
-						if idx1 != -1 && idx2 != -1 && idx1 != idx2 &&
-							distinguishable[min(idx1, idx2)][max(idx1, idx2)] {
-							distinguishable[i][j] = true
-							distinguishable[j][i] = true
-							changed = true
-							break
-						}
+		for _, transition := range dfa.Transitions[currentIdx] {
+			switch v := transition.(type) {
+			case string:
+				if v != "@v" && !accessible[v] {
+					accessible[v] = true
+					queue = append(queue, v)
+				}
+			case []string:
+				for _, state := range v {
+					if state != "@v" && !accessible[state] {
+						accessible[state] = true
+						queue = append(queue, state)
 					}
 				}
 			}
 		}
 	}
 
-	// Find equivalent classes
-	processed := make([]bool, n)
-	equivalenceClasses := [][]int{}
-
-	for i := range n {
-		if processed[i] {
-			continue
+	// Create new DFA with only accessible states
+	accessibleStates := make([]string, 0)
+	oldToAccessible := make(map[int]int)
+	
+	for i, state := range dfa.States {
+		if accessible[state] {
+			oldToAccessible[i] = len(accessibleStates)
+			accessibleStates = append(accessibleStates, state)
 		}
-
-		class := []int{i}
-		processed[i] = true
-
-		for j := i + 1; j < n; j++ {
-			if !processed[j] && !distinguishable[i][j] {
-				class = append(class, j)
-				processed[j] = true
-			}
-		}
-
-		equivalenceClasses = append(equivalenceClasses, class)
 	}
 
-	// Build minimized DFA
-	newStates := make([]string, len(equivalenceClasses))
+	// Build transitions for accessible states only
+	accessibleTransitions := make([][]any, len(accessibleStates))
+	for i, state := range accessibleStates {
+		oldIdx := getStateIndex(dfa, state)
+		if oldIdx == -1 || oldIdx >= len(dfa.Transitions) {
+			continue
+		}
+		
+		row := make([]any, len(dfa.Alphabet))
+		for j, transition := range dfa.Transitions[oldIdx] {
+			switch v := transition.(type) {
+			case string:
+				if v == "@v" || !accessible[v] {
+					row[j] = "@v"
+				} else {
+					row[j] = v
+				}
+			case []string:
+				validStates := make([]string, 0)
+				for _, state := range v {
+					if state != "@v" && accessible[state] {
+						validStates = append(validStates, state)
+					}
+				}
+				if len(validStates) == 0 {
+					row[j] = "@v"
+				} else if len(validStates) == 1 {
+					row[j] = validStates[0]
+				} else {
+					row[j] = validStates
+				}
+			default:
+				row[j] = "@v"
+			}
+		}
+		accessibleTransitions[i] = row
+	}
+
+	// Build accessible acceptance states
+	accessibleAcceptance := make([]string, 0)
+	for _, state := range dfa.Acceptance {
+		if accessible[state] {
+			accessibleAcceptance = append(accessibleAcceptance, state)
+		}
+	}
+
+	// Create temporary DFA with only accessible states
+	accessibleDFA := &FA{
+		Alphabet:    dfa.Alphabet,
+		States:      accessibleStates,
+		Initial:     dfa.Initial,
+		Acceptance:  accessibleAcceptance,
+		Transitions: accessibleTransitions,
+	}
+
+	// Now proceed with Hopcroft's algorithm on accessible states
+	n = len(accessibleDFA.States)
+	if n <= 1 {
+		return accessibleDFA, nil
+	}
+
+	// Partition states into accepting and non-accepting
+	accepting := make([]int, 0)
+	nonAccepting := make([]int, 0)
+
+	for i, state := range accessibleDFA.States {
+		if Contains(accessibleDFA.Acceptance, state) {
+			accepting = append(accepting, i)
+		} else {
+			nonAccepting = append(nonAccepting, i)
+		}
+	}
+
+	// Initial partition
+	partition := make([][]int, 0)
+	if len(nonAccepting) > 0 {
+		partition = append(partition, nonAccepting)
+	}
+	if len(accepting) > 0 {
+		partition = append(partition, accepting)
+	}
+
+	// Create work list with all alphabet symbols for each partition
+	workList := make([][]int, 0)
+	for _, block := range partition {
+		for range accessibleDFA.Alphabet {
+			workList = append(workList, block)
+		}
+	}
+
+	// Hopcroft's algorithm main loop
+	for len(workList) > 0 {
+		// Pop from work list
+		splitter := workList[0]
+		workList = workList[1:]
+
+		for symbolIdx := range accessibleDFA.Alphabet {
+			// Find states that transition to splitter on this symbol
+			predecessors := make([]int, 0)
+			for i, state := range accessibleDFA.States {
+				next := getNextState(accessibleDFA, state, symbolIdx)
+				nextIdx := getStateIndex(accessibleDFA, next)
+				if nextIdx != -1 {
+					if slices.Contains(splitter, nextIdx) {
+						predecessors = append(predecessors, i)
+					}
+				}
+			}
+
+			if len(predecessors) == 0 {
+				continue
+			}
+
+			// Split blocks that intersect with predecessors
+			newPartition := make([][]int, 0)
+			for _, block := range partition {
+				intersect := make([]int, 0)
+				difference := make([]int, 0)
+
+				for _, state := range block {
+					found := slices.Contains(predecessors, state)
+					if found {
+						intersect = append(intersect, state)
+					} else {
+						difference = append(difference, state)
+					}
+				}
+
+				if len(intersect) > 0 && len(difference) > 0 {
+					// Block was split
+					newPartition = append(newPartition, intersect)
+					newPartition = append(newPartition, difference)
+
+					// Update work list
+					newWorkList := make([][]int, 0)
+					for _, workItem := range workList {
+						if slicesEqual(workItem, block) {
+							// Replace with smaller block
+							if len(intersect) <= len(difference) {
+								newWorkList = append(newWorkList, intersect)
+							} else {
+								newWorkList = append(newWorkList, difference)
+							}
+						} else {
+							newWorkList = append(newWorkList, workItem)
+						}
+					}
+					workList = newWorkList
+
+					// Add new block to work list for all symbols
+					var smallerBlock []int
+					if len(intersect) <= len(difference) {
+						smallerBlock = intersect
+					} else {
+						smallerBlock = difference
+					}
+					for range accessibleDFA.Alphabet {
+						workList = append(workList, smallerBlock)
+					}
+				} else {
+					newPartition = append(newPartition, block)
+				}
+			}
+			partition = newPartition
+		}
+	}
+
+	// Build minimized DFA from partition
+	newStates := make([]string, len(partition))
 	oldToNew := make(map[int]int)
 
-	for i, class := range equivalenceClasses {
+	for i, block := range partition {
 		newStates[i] = fmt.Sprintf("q%d", i)
-		for _, oldIdx := range class {
+		for _, oldIdx := range block {
 			oldToNew[oldIdx] = i
 		}
 	}
 
-	// Build transitions for minimized DFA
+	// Build transitions
 	newTransitions := make([][]any, len(newStates))
-	for i, class := range equivalenceClasses {
-		representative := class[0] // Use first state as representative
-		row := make([]any, len(dfa.Alphabet))
+	for i, block := range partition {
+		representative := block[0]
+		row := make([]any, len(accessibleDFA.Alphabet))
 
-		for j := range dfa.Alphabet {
-			next := getNextState(dfa, dfa.States[representative], j)
-			nextIdx := getStateIndex(dfa, next)
+		for j := range accessibleDFA.Alphabet {
+			next := getNextState(accessibleDFA, accessibleDFA.States[representative], j)
+			nextIdx := getStateIndex(accessibleDFA, next)
 
 			if nextIdx == -1 {
 				row[j] = "@v"
@@ -760,25 +901,46 @@ func MinimizeDFA(dfa *FA) (*FA, error) {
 		newTransitions[i] = row
 	}
 
-	// Determine new initial and acceptance states
-	initialIdx := getStateIndex(dfa, dfa.Initial)
+	// Determine initial and acceptance states
+	initialIdx := getStateIndex(accessibleDFA, accessibleDFA.Initial)
 	newInitial := newStates[oldToNew[initialIdx]]
 
 	newAcceptance := []string{}
-	for i, class := range equivalenceClasses {
-		for _, oldIdx := range class {
-			if Contains(dfa.Acceptance, dfa.States[oldIdx]) {
+	for i, block := range partition {
+		for _, oldIdx := range block {
+			if Contains(accessibleDFA.Acceptance, accessibleDFA.States[oldIdx]) {
 				newAcceptance = append(newAcceptance, newStates[i])
 				break
 			}
 		}
 	}
 
+	log.Print(&FA{
+		Alphabet:    accessibleDFA.Alphabet,
+		States:      newStates,
+		Initial:     newInitial,
+		Acceptance:  newAcceptance,
+		Transitions: newTransitions,
+	})
+
 	return &FA{
-		Alphabet:    dfa.Alphabet,
+		Alphabet:    accessibleDFA.Alphabet,
 		States:      newStates,
 		Initial:     newInitial,
 		Acceptance:  newAcceptance,
 		Transitions: newTransitions,
 	}, nil
+}
+
+// slicesEqual checks if two int slices are equal
+func slicesEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
