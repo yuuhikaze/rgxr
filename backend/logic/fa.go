@@ -494,6 +494,14 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 	stateToIndex := make(map[string]int)
 	stateToIndex[strings.Join(initialClosure, ",")] = 0
 
+	// Create DFA alphabet without epsilon
+	dfaAlphabet := make([]string, 0)
+	for i, symbol := range nfa.Alphabet {
+		if i != epsilonIdx {
+			dfaAlphabet = append(dfaAlphabet, symbol)
+		}
+	}
+
 	// Build DFA states and transitions
 	dfaTransitions := [][]any{}
 	queue := [][]string{initialClosure}
@@ -510,12 +518,20 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 		}
 		processed[currentKey] = true
 
-		row := make([]any, len(nfa.Alphabet))
+		row := make([]any, len(dfaAlphabet))
 
-		for symbolIdx, symbol := range nfa.Alphabet {
-			// Skip epsilon transitions in DFA construction
-			if symbol == "@e" {
-				row[symbolIdx] = "@t"
+		for dfaSymbolIdx, symbol := range dfaAlphabet {
+			// Find original symbol index in NFA
+			nfaSymbolIdx := -1
+			for i, nfaSymbol := range nfa.Alphabet {
+				if nfaSymbol == symbol {
+					nfaSymbolIdx = i
+					break
+				}
+			}
+
+			if nfaSymbolIdx == -1 {
+				row[dfaSymbolIdx] = "@t"
 				needsTrashState = true
 				continue
 			}
@@ -533,8 +549,8 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 				}
 
 				if stateIdx >= 0 && stateIdx < len(nfa.Transitions) &&
-					symbolIdx < len(nfa.Transitions[stateIdx]) {
-					next := nfa.Transitions[stateIdx][symbolIdx]
+					nfaSymbolIdx < len(nfa.Transitions[stateIdx]) {
+					next := nfa.Transitions[stateIdx][nfaSymbolIdx]
 
 					switch v := next.(type) {
 					case string:
@@ -558,7 +574,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 			}
 
 			if len(nextStates) == 0 {
-				row[symbolIdx] = "@t"
+				row[dfaSymbolIdx] = "@t"
 				needsTrashState = true
 			} else {
 				nextStateSlice := make([]string, 0, len(nextStates))
@@ -576,7 +592,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 					queue = append(queue, nextClosure)
 				}
 
-				row[symbolIdx] = nextKey
+				row[dfaSymbolIdx] = nextKey
 			}
 		}
 		dfaTransitions = append(dfaTransitions, row)
@@ -592,7 +608,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 	if needsTrashState {
 		dfaStateNames = append(dfaStateNames, "@t")
 		// Create transitions for trash state - all transitions go to itself
-		trashRow := make([]any, len(nfa.Alphabet))
+		trashRow := make([]any, len(dfaAlphabet))
 		for j := range trashRow {
 			trashRow[j] = "@t"
 		}
@@ -629,7 +645,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 	}
 
 	return &FA{
-		Alphabet:    nfa.Alphabet,
+		Alphabet:    dfaAlphabet,
 		States:      dfaStateNames,
 		Initial:     dfaStateNames[0],
 		Acceptance:  dfaAcceptance,
