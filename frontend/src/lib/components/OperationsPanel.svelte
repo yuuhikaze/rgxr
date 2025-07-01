@@ -129,154 +129,156 @@
         </p>
     </div>
 
-    {#if error}
-        <p class="error">{error}</p>
-    {/if}
-
-    <!-- Tab Navigation -->
-    <div class="tab-nav">
-        <button
-            class="tab-button"
-            class:active={activeTab === 'unary'}
-            on:click={() => (activeTab = 'unary')}
-        >
-            Unary Ops
-        </button>
-        <button
-            class="tab-button"
-            class:active={activeTab === 'binary'}
-            on:click={() => (activeTab = 'binary')}
-        >
-            Binary Ops
-        </button>
-        <button
-            class="tab-button"
-            class:active={activeTab === 'regex'}
-            on:click={() => (activeTab = 'regex')}
-        >
-            Regex/String
-        </button>
-    </div>
-
-    <!-- Tab Content -->
-    <div class="tab-content">
-        {#if activeTab === 'unary'}
-            <div class="operations-grid">
-                <button
-                    on:click={() => performOperation('complement')}
-                    disabled={loading || selectedIds.length !== 1}
-                >
-                    Complement (¬)
-                </button>
-
-                <button
-                    on:click={() => performOperation('minimize')}
-                    disabled={loading || selectedIds.length !== 1}
-                >
-                    Minimize DFA
-                </button>
-
-                <button
-                    on:click={() => performOperation('nfa-to-dfa')}
-                    disabled={loading || selectedIds.length !== 1}
-                >
-                    NFA to DFA
-                </button>
-
-                <button
-                    on:click={() => performOperation('fa-to-regex')}
-                    disabled={loading || selectedIds.length !== 1}
-                >
-                    FA to Regex
-                </button>
-            </div>
+    <div class="scrollable-view">
+        {#if error}
+            <p class="error">{error}</p>
         {/if}
 
-        {#if activeTab === 'binary'}
-            <div class="operations-grid">
-                <button
-                    on:click={() => performOperation('union')}
-                    disabled={loading || selectedIds.length < 2}
-                >
-                    Union (∪)
-                </button>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button
+                class="tab-button"
+                class:active={activeTab === 'unary'}
+                on:click={() => (activeTab = 'unary')}
+            >
+                Unary Ops
+            </button>
+            <button
+                class="tab-button"
+                class:active={activeTab === 'binary'}
+                on:click={() => (activeTab = 'binary')}
+            >
+                Binary Ops
+            </button>
+            <button
+                class="tab-button"
+                class:active={activeTab === 'regex'}
+                on:click={() => (activeTab = 'regex')}
+            >
+                Regex/String
+            </button>
+        </div>
 
-                <button
-                    on:click={() => performOperation('n-union')}
-                    disabled={loading || selectedIds.length < 2}
-                >
-                    N-Union (∪)
-                </button>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            {#if activeTab === 'unary'}
+                <div class="operations-grid">
+                    <button
+                        on:click={() => performOperation('complement')}
+                        disabled={loading || selectedIds.length !== 1}
+                    >
+                        Complement (¬)
+                    </button>
 
-                <button
-                    on:click={() => performOperation('intersection')}
-                    disabled={loading || selectedIds.length < 2}
-                >
-                    Intersection (∩)
-                </button>
+                    <button
+                        on:click={() => performOperation('minimize')}
+                        disabled={loading || selectedIds.length !== 1}
+                    >
+                        Minimize DFA
+                    </button>
 
-                <button
-                    on:click={() => performOperation('concatenation')}
-                    disabled={loading || selectedIds.length < 1}
-                >
-                    Concatenation
-                </button>
-            </div>
-        {/if}
+                    <button
+                        on:click={() => performOperation('nfa-to-dfa')}
+                        disabled={loading || selectedIds.length !== 1}
+                    >
+                        NFA to DFA
+                    </button>
 
-        {#if activeTab === 'regex'}
-            <div class="regex-string-section">
-                <div class="input-section">
-                    <h4>Regex to NFA</h4>
-                    <div class="input-group">
-                        <input
-                            type="text"
-                            bind:value={regexInput}
-                            placeholder="Enter regular expression"
-                            disabled={loading}
-                        />
-                        <button
-                            on:click={() => performOperation('regex-to-nfa')}
-                            disabled={loading || !regexInput}
-                        >
-                            Convert
-                        </button>
-                    </div>
+                    <button
+                        on:click={() => performOperation('fa-to-regex')}
+                        disabled={loading || selectedIds.length !== 1}
+                    >
+                        FA to Regex
+                    </button>
                 </div>
+            {/if}
 
-                <div class="input-section">
-                    <h4>Test String</h4>
-                    <div class="input-group">
-                        <input
-                            type="text"
-                            bind:value={stringInput}
-                            placeholder="Enter test string"
-                            disabled={loading}
-                        />
-                        <button
-                            on:click={() => performOperation('run-string')}
-                            disabled={loading || selectedIds.length !== 1 || !stringInput}
-                        >
-                            Run
-                        </button>
-                    </div>
+            {#if activeTab === 'binary'}
+                <div class="operations-grid">
+                    <button
+                        on:click={() => performOperation('union')}
+                        disabled={loading || selectedIds.length < 2}
+                    >
+                        Union (∪)
+                    </button>
 
-                    {#if runResult}
-                        <div
-                            class="run-result"
-                            class:accepted={runResult.accepted}
-                            class:rejected={!runResult.accepted}
-                        >
-                            <p>
-                                <strong>Result:</strong>
-                                {runResult.accepted ? 'Accepted' : 'Rejected'}
-                            </p>
-                            <p><strong>Path:</strong> {runResult.path.join(' → ')}</p>
+                    <button
+                        on:click={() => performOperation('n-union')}
+                        disabled={loading || selectedIds.length < 2}
+                    >
+                        N-Union (∪)
+                    </button>
+
+                    <button
+                        on:click={() => performOperation('intersection')}
+                        disabled={loading || selectedIds.length < 2}
+                    >
+                        Intersection (∩)
+                    </button>
+
+                    <button
+                        on:click={() => performOperation('concatenation')}
+                        disabled={loading || selectedIds.length < 1}
+                    >
+                        Concatenation
+                    </button>
+                </div>
+            {/if}
+
+            {#if activeTab === 'regex'}
+                <div class="regex-string-section">
+                    <div class="input-section">
+                        <h4>Regex to NFA</h4>
+                        <div class="input-group">
+                            <input
+                                type="text"
+                                bind:value={regexInput}
+                                placeholder="Enter regular expression"
+                                disabled={loading}
+                            />
+                            <button
+                                on:click={() => performOperation('regex-to-nfa')}
+                                disabled={loading || !regexInput}
+                            >
+                                Convert
+                            </button>
                         </div>
-                    {/if}
+                    </div>
+
+                    <div class="input-section">
+                        <h4>Test String</h4>
+                        <div class="input-group">
+                            <input
+                                type="text"
+                                bind:value={stringInput}
+                                placeholder="Enter test string"
+                                disabled={loading}
+                            />
+                            <button
+                                on:click={() => performOperation('run-string')}
+                                disabled={loading || selectedIds.length !== 1 || !stringInput}
+                            >
+                                Run
+                            </button>
+                        </div>
+
+                        {#if runResult}
+                            <div
+                                class="run-result"
+                                class:accepted={runResult.accepted}
+                                class:rejected={!runResult.accepted}
+                            >
+                                <p>
+                                    <strong>Result:</strong>
+                                    {runResult.accepted ? 'Accepted' : 'Rejected'}
+                                </p>
+                                <p><strong>Path:</strong> {runResult.path.join(' → ')}</p>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
-            </div>
-        {/if}
+            {/if}
+        </div>
     </div>
 </div>
 
@@ -289,6 +291,10 @@
         border: 1px solid #ddd;
         border-radius: 4px;
         overflow: hidden;
+    }
+    
+    .scrollable-view {
+        overflow: auto;
     }
 
     .panel-header {
@@ -348,7 +354,6 @@
     /* Tab Content */
     .tab-content {
         flex: 1;
-        overflow-y: auto;
         min-height: 0;
     }
 
