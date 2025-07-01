@@ -498,6 +498,7 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 	dfaTransitions := [][]any{}
 	queue := [][]string{initialClosure}
 	processed := make(map[string]bool)
+	needsTrashState := false
 
 	for len(queue) > 0 {
 		currentSet := queue[0]
@@ -514,7 +515,8 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 		for symbolIdx, symbol := range nfa.Alphabet {
 			// Skip epsilon transitions in DFA construction
 			if symbol == "@e" {
-				row[symbolIdx] = "@v"
+				row[symbolIdx] = "@t"
+				needsTrashState = true
 				continue
 			}
 
@@ -556,7 +558,8 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 			}
 
 			if len(nextStates) == 0 {
-				row[symbolIdx] = "@v"
+				row[symbolIdx] = "@t"
+				needsTrashState = true
 			} else {
 				nextStateSlice := make([]string, 0, len(nextStates))
 				for state := range nextStates {
@@ -585,18 +588,29 @@ func NFAToDFA(nfa *FA) (*FA, error) {
 		dfaStateNames[i] = fmt.Sprintf("q%d", i)
 	}
 
+	// Add trash state if needed
+	if needsTrashState {
+		dfaStateNames = append(dfaStateNames, "@t")
+		// Create transitions for trash state - all transitions go to itself
+		trashRow := make([]any, len(nfa.Alphabet))
+		for j := range trashRow {
+			trashRow[j] = "@t"
+		}
+		dfaTransitions = append(dfaTransitions, trashRow)
+	}
+
 	// Update transitions to use new state names
 	finalTransitions := make([][]any, len(dfaTransitions))
 	for i, row := range dfaTransitions {
 		finalRow := make([]any, len(row))
 		for j, transition := range row {
-			if transition == "@v" {
-				finalRow[j] = "@v"
+			if transition == "@t" {
+				finalRow[j] = "@t"
 			} else if stateKey, ok := transition.(string); ok {
 				if idx, exists := stateToIndex[stateKey]; exists {
 					finalRow[j] = dfaStateNames[idx]
 				} else {
-					finalRow[j] = "@v"
+					finalRow[j] = "@t"
 				}
 			}
 		}

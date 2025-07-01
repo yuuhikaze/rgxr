@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"net/http"
-	"regexp"
-	"strings"
-
 	"github.com/google/uuid"
 	"github.com/yuuhikaze/rgxr/logic"
 	"github.com/yuuhikaze/rgxr/storage"
+	"net/http"
+	"regexp"
 )
 
 type RenderRequest struct {
@@ -118,8 +116,21 @@ func fixPipeSymbols(tex string) string {
 		return "{" + content + "}"
 	})
 
-	tex = strings.ReplaceAll(tex, "@e", "$\\varepsilon$")
-	tex = strings.ReplaceAll(tex, "@v", "$\\emptyset$")
+	mathLabelRegex := regexp.MustCompile(`\{[^}]*@.[^}]*\}`)
+
+	// Fix node labels: replace @e with epsilon
+	tex = mathLabelRegex.ReplaceAllStringFunc(tex, func(match string) string {
+		content := match[1 : len(match)-1]
+		content = regexp.MustCompile(`@e`).ReplaceAllString(content, "$\\varepsilon$")
+		return "{" + content + "}"
+	})
+
+	// Fix node labels: replace @v with emptyset
+	tex = mathLabelRegex.ReplaceAllStringFunc(tex, func(match string) string {
+		content := match[1 : len(match)-1]
+		content = regexp.MustCompile(`@t`).ReplaceAllString(content, "$\\emptyset$")
+		return "{" + content + "}"
+	})
 
 	return tex
 }
