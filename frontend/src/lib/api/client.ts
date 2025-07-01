@@ -188,11 +188,7 @@ export class APIClient {
 
     // Convert NFA to DFA
     async nfaToDFA(uuid: string): Promise<FA> {
-        const response = await fetch(`${this.baseURL}/api/nfa-to-dfa`, {
-            method: 'POST',
-            headers: this.authHeaders(),
-            body: JSON.stringify({ uuid })
-        });
+        const response = await fetch(`${this.baseURL}/api/nfa-to-dfa?uuid=${uuid}`);
 
         if (!response.ok) {
             throw new Error(`NFA to DFA conversion failed: ${response.statusText}`);

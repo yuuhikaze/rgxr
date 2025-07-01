@@ -119,6 +119,7 @@ func fixPipeSymbols(tex string) string {
 	})
 
 	tex = strings.ReplaceAll(tex, "@e", "$\\varepsilon$")
+	tex = strings.ReplaceAll(tex, "@v", "$\\emptyset$")
 
 	return tex
 }
