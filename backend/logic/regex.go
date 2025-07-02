@@ -118,9 +118,23 @@ func RegexToNFA(regex string) (*FA, error) {
 		return createEpsilonNFA(), nil
 	}
 
-	// Parse and convert regex to NFA
-	// This is a simplified implementation - a full implementation would need a proper parser
-	return parseRegexToNFA(regex)
+	// Parse and convert regex to NFA using Thompson's construction
+	parser := &RegexParser{
+		input:        regex,
+		runes:        []rune(regex),
+		pos:          0,
+		stateCounter: 0,
+	}
+	fragment, err := parser.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	
+	if parser.pos < len(parser.runes) {
+		return nil, fmt.Errorf("unexpected character at position %d", parser.pos)
+	}
+
+	return fragment.toFA(), nil
 }
 
 // Helper functions for regex operations
@@ -189,32 +203,6 @@ func getStateIndexInList(states []string, state string) int {
 	return -1
 }
 
-// Simplified regex parsing - in practice, you'd want a more robust parser
-func parseRegexToNFA(regex string) (*FA, error) {
-	// This is a very basic implementation
-	// A full implementation would need proper parsing of operators, precedence, etc.
-
-	if len(regex) == 1 {
-		// Single character
-		return createCharacterNFA(regex), nil
-	}
-
-	// For now, return a simple NFA that accepts the literal string
-	// In practice, you'd implement Thompson's construction properly
-	states := []string{"q0", "q1"}
-	transitions := [][]any{
-		{[]string{"q1"}}, // from q0 on the character
-		{"@v"},           // from q1 (no transitions)
-	}
-
-	return &FA{
-		Alphabet:    []string{regex}, // Simplified - should extract actual alphabet
-		States:      states,
-		Initial:     "q0",
-		Acceptance:  []string{"q1"},
-		Transitions: transitions,
-	}, nil
-}
 
 func createEmptyNFA() *FA {
 	return &FA{
@@ -251,82 +239,459 @@ func createCharacterNFA(char string) *FA {
 
 // Thompson's construction for building NFAs from regex
 type NFAFragment struct {
-	Start string
-	End   string
-	FA    *FA
+	start       string
+	end         string
+	states      map[string]bool
+	transitions map[string]map[string][]string
+	alphabet    map[string]bool
 }
 
-// More complete regex to NFA conversion using Thompson's construction
-func RegexToNFAComplete(regex string) (*FA, error) {
-	tokens := tokenizeRegex(regex)
-	if len(tokens) == 0 {
-		return createEmptyNFA(), nil
+// Convert NFAFragment to FA
+func (f *NFAFragment) toFA() *FA {
+	// Handle empty language case
+	if f.end == "" {
+		return &FA{
+			Alphabet:    []string{},
+			States:      []string{f.start},
+			Initial:     f.start,
+			Acceptance:  []string{}, // No accepting states for empty language
+			Transitions: [][]any{{"@v"}},
+		}
 	}
 
-	fragment, err := buildNFAFromTokens(tokens)
+	// Build alphabet slice (regular symbols first, then epsilon)
+	alphabetSlice := make([]string, 0, len(f.alphabet))
+	for symbol := range f.alphabet {
+		if symbol != "@e" {
+			alphabetSlice = append(alphabetSlice, symbol)
+		}
+	}
+	// Add epsilon if it exists in transitions
+	hasEpsilon := false
+	for symbol := range f.alphabet {
+		if symbol == "@e" {
+			hasEpsilon = true
+			break
+		}
+	}
+	if hasEpsilon {
+		alphabetSlice = append(alphabetSlice, "@e")
+	}
+
+	// Build states slice in sorted order for consistency
+	statesSlice := make([]string, 0, len(f.states))
+	for state := range f.states {
+		statesSlice = append(statesSlice, state)
+	}
+	// Simple sort by state name
+	for i := 0; i < len(statesSlice); i++ {
+		for j := i + 1; j < len(statesSlice); j++ {
+			if statesSlice[i] > statesSlice[j] {
+				statesSlice[i], statesSlice[j] = statesSlice[j], statesSlice[i]
+			}
+		}
+	}
+
+	// Build transitions matrix
+	transitions := make([][]any, len(statesSlice))
+	for i, state := range statesSlice {
+		row := make([]any, len(alphabetSlice))
+		for j, symbol := range alphabetSlice {
+			if stateTransitions, exists := f.transitions[state]; exists {
+				if nextStates, exists := stateTransitions[symbol]; exists && len(nextStates) > 0 {
+					if len(nextStates) == 1 {
+						row[j] = nextStates[0]
+					} else {
+						row[j] = nextStates
+					}
+				} else {
+					row[j] = "@v"
+				}
+			} else {
+				row[j] = "@v"
+			}
+		}
+		transitions[i] = row
+	}
+
+	return &FA{
+		Alphabet:    alphabetSlice,
+		States:      statesSlice,
+		Initial:     f.start,
+		Acceptance:  []string{f.end},
+		Transitions: transitions,
+	}
+}
+
+// RegexParser implements a recursive descent parser for regular expressions
+type RegexParser struct {
+	input        string
+	runes        []rune
+	pos          int
+	stateCounter int
+}
+
+// Generate unique state names
+func (p *RegexParser) newState() string {
+	state := fmt.Sprintf("q%d", p.stateCounter)
+	p.stateCounter++
+	return state
+}
+
+// Peek at current character without advancing position
+func (p *RegexParser) peek() rune {
+	if p.pos >= len(p.runes) {
+		return 0
+	}
+	return p.runes[p.pos]
+}
+
+// Advance position and return current character
+func (p *RegexParser) advance() rune {
+	if p.pos >= len(p.runes) {
+		return 0
+	}
+	ch := p.runes[p.pos]
+	p.pos++
+	return ch
+}
+
+// Parse expression (handles union with lowest precedence)
+func (p *RegexParser) parseExpression() (*NFAFragment, error) {
+	left, err := p.parseSequence()
 	if err != nil {
 		return nil, err
 	}
 
-	return fragment.FA, nil
+	for p.peek() == '∪' {
+		p.advance() // consume '∪'
+		right, err := p.parseSequence()
+		if err != nil {
+			return nil, err
+		}
+		left = p.union(left, right)
+	}
+
+	return left, nil
 }
 
-// Tokenize regex into basic components
-func tokenizeRegex(regex string) []string {
-	var tokens []string
-	runes := []rune(regex)
+// Parse sequence (handles concatenation)
+func (p *RegexParser) parseSequence() (*NFAFragment, error) {
+	fragments := []*NFAFragment{}
 
-	for i := 0; i < len(runes); i++ {
-		switch runes[i] {
-		case '(':
-			tokens = append(tokens, "(")
-		case ')':
-			tokens = append(tokens, ")")
-		case '*':
-			tokens = append(tokens, "*")
-		case '+':
-			tokens = append(tokens, "+")
-		case '∪':
-			tokens = append(tokens, "∪")
-		case '∅':
-			tokens = append(tokens, "∅")
-		case 'ε':
-			tokens = append(tokens, "ε")
-		default:
-			tokens = append(tokens, string(runes[i]))
+	for p.pos < len(p.runes) && p.peek() != ')' && p.peek() != '∪' {
+		fragment, err := p.parseFactor()
+		if err != nil {
+			return nil, err
+		}
+		fragments = append(fragments, fragment)
+	}
+
+	if len(fragments) == 0 {
+		return p.epsilon(), nil
+	}
+
+	result := fragments[0]
+	for i := 1; i < len(fragments); i++ {
+		result = p.concatenate(result, fragments[i])
+	}
+
+	return result, nil
+}
+
+// Parse factor (handles Kleene star and plus)
+func (p *RegexParser) parseFactor() (*NFAFragment, error) {
+	base, err := p.parseAtom()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.peek() == '*' || p.peek() == '+' {
+		op := p.advance()
+		if op == '*' {
+			base = p.kleeneStar(base)
+		} else if op == '+' {
+			base = p.kleenePlus(base)
 		}
 	}
 
-	return tokens
+	return base, nil
 }
 
-// Build NFA from tokenized regex using recursive descent parsing
-func buildNFAFromTokens(tokens []string) (*NFAFragment, error) {
-	if len(tokens) == 0 {
-		return nil, fmt.Errorf("empty token list")
+// Parse atom (basic elements)
+func (p *RegexParser) parseAtom() (*NFAFragment, error) {
+	if p.pos >= len(p.runes) {
+		return nil, fmt.Errorf("unexpected end of input")
 	}
 
-	// Simple implementation for basic cases
-	if len(tokens) == 1 {
-		token := tokens[0]
-		switch token {
-		case "∅":
-			fa := createEmptyNFA()
-			return &NFAFragment{Start: "q0", End: "q0", FA: fa}, nil
-		case "ε":
-			fa := createEpsilonNFA()
-			return &NFAFragment{Start: "q0", End: "q0", FA: fa}, nil
-		default:
-			fa := createCharacterNFA(token)
-			return &NFAFragment{Start: "q0", End: "q1", FA: fa}, nil
+	ch := p.runes[p.pos]
+
+	if ch == '(' {
+		p.pos++
+		expr, err := p.parseExpression()
+		if err != nil {
+			return nil, err
 		}
+		if p.pos >= len(p.runes) || p.runes[p.pos] != ')' {
+			return nil, fmt.Errorf("expected closing parenthesis")
+		}
+		p.pos++
+		return expr, nil
 	}
 
-	// For more complex expressions, you would implement proper parsing
-	// This is a simplified version
+	if ch == 'ε' {
+		p.pos++
+		return p.epsilon(), nil
+	}
+
+	if ch == '∅' {
+		p.pos++
+		return p.empty(), nil
+	}
+
+	// Regular character
+	p.pos++
+	return p.character(string(ch)), nil
+}
+
+// Thompson construction primitives
+
+// Create epsilon NFA fragment
+func (p *RegexParser) epsilon() *NFAFragment {
+	start := p.newState()
+	end := p.newState()
+
+	states := map[string]bool{start: true, end: true}
+	transitions := map[string]map[string][]string{
+		start: {"@e": {end}},
+		end:   {},
+	}
+	alphabet := map[string]bool{"@e": true}
+
 	return &NFAFragment{
-		Start: "q0",
-		End:   "q1",
-		FA:    createCharacterNFA(strings.Join(tokens, "")),
-	}, nil
+		start:       start,
+		end:         end,
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Create empty language NFA fragment
+func (p *RegexParser) empty() *NFAFragment {
+	start := p.newState()
+
+	states := map[string]bool{start: true}
+	transitions := map[string]map[string][]string{start: {}}
+	alphabet := map[string]bool{}
+
+	return &NFAFragment{
+		start:       start,
+		end:         "", // No accepting state for empty language
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Create character NFA fragment
+func (p *RegexParser) character(char string) *NFAFragment {
+	start := p.newState()
+	end := p.newState()
+
+	states := map[string]bool{start: true, end: true}
+	transitions := map[string]map[string][]string{
+		start: {char: {end}},
+		end:   {},
+	}
+	alphabet := map[string]bool{char: true}
+
+	return &NFAFragment{
+		start:       start,
+		end:         end,
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Union operation
+func (p *RegexParser) union(left, right *NFAFragment) *NFAFragment {
+	start := p.newState()
+	end := p.newState()
+
+	// Combine states
+	states := map[string]bool{start: true, end: true}
+	for state := range left.states {
+		states[state] = true
+	}
+	for state := range right.states {
+		states[state] = true
+	}
+
+	// Combine alphabet
+	alphabet := map[string]bool{"@e": true}
+	for symbol := range left.alphabet {
+		alphabet[symbol] = true
+	}
+	for symbol := range right.alphabet {
+		alphabet[symbol] = true
+	}
+
+	// Combine transitions
+	transitions := map[string]map[string][]string{
+		start: {"@e": {left.start, right.start}},
+		end:   {},
+	}
+
+	// Copy left transitions
+	for state, stateTransitions := range left.transitions {
+		if transitions[state] == nil {
+			transitions[state] = make(map[string][]string)
+		}
+		for symbol, nextStates := range stateTransitions {
+			transitions[state][symbol] = append(transitions[state][symbol], nextStates...)
+		}
+	}
+
+	// Copy right transitions
+	for state, stateTransitions := range right.transitions {
+		if transitions[state] == nil {
+			transitions[state] = make(map[string][]string)
+		}
+		for symbol, nextStates := range stateTransitions {
+			transitions[state][symbol] = append(transitions[state][symbol], nextStates...)
+		}
+	}
+
+	// Add epsilon transitions from old end states to new end state
+	if transitions[left.end] == nil {
+		transitions[left.end] = make(map[string][]string)
+	}
+	transitions[left.end]["@e"] = append(transitions[left.end]["@e"], end)
+
+	if transitions[right.end] == nil {
+		transitions[right.end] = make(map[string][]string)
+	}
+	transitions[right.end]["@e"] = append(transitions[right.end]["@e"], end)
+
+	return &NFAFragment{
+		start:       start,
+		end:         end,
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Concatenation operation
+func (p *RegexParser) concatenate(left, right *NFAFragment) *NFAFragment {
+	// Combine states
+	states := map[string]bool{}
+	for state := range left.states {
+		states[state] = true
+	}
+	for state := range right.states {
+		states[state] = true
+	}
+
+	// Combine alphabet
+	alphabet := map[string]bool{"@e": true}
+	for symbol := range left.alphabet {
+		alphabet[symbol] = true
+	}
+	for symbol := range right.alphabet {
+		alphabet[symbol] = true
+	}
+
+	// Combine transitions
+	transitions := map[string]map[string][]string{}
+
+	// Copy left transitions
+	for state, stateTransitions := range left.transitions {
+		if transitions[state] == nil {
+			transitions[state] = make(map[string][]string)
+		}
+		for symbol, nextStates := range stateTransitions {
+			transitions[state][symbol] = append(transitions[state][symbol], nextStates...)
+		}
+	}
+
+	// Copy right transitions
+	for state, stateTransitions := range right.transitions {
+		if transitions[state] == nil {
+			transitions[state] = make(map[string][]string)
+		}
+		for symbol, nextStates := range stateTransitions {
+			transitions[state][symbol] = append(transitions[state][symbol], nextStates...)
+		}
+	}
+
+	// Add epsilon transition from left end to right start
+	if transitions[left.end] == nil {
+		transitions[left.end] = make(map[string][]string)
+	}
+	transitions[left.end]["@e"] = append(transitions[left.end]["@e"], right.start)
+
+	return &NFAFragment{
+		start:       left.start,
+		end:         right.end,
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Kleene star operation
+func (p *RegexParser) kleeneStar(fragment *NFAFragment) *NFAFragment {
+	start := p.newState()
+	end := p.newState()
+
+	// Combine states
+	states := map[string]bool{start: true, end: true}
+	for state := range fragment.states {
+		states[state] = true
+	}
+
+	// Combine alphabet
+	alphabet := map[string]bool{"@e": true}
+	for symbol := range fragment.alphabet {
+		alphabet[symbol] = true
+	}
+
+	// Copy transitions
+	transitions := map[string]map[string][]string{
+		start: {"@e": {fragment.start, end}}, // Can go to fragment or skip it
+		end:   {},
+	}
+
+	// Copy fragment transitions
+	for state, stateTransitions := range fragment.transitions {
+		if transitions[state] == nil {
+			transitions[state] = make(map[string][]string)
+		}
+		for symbol, nextStates := range stateTransitions {
+			transitions[state][symbol] = append(transitions[state][symbol], nextStates...)
+		}
+	}
+
+	// Add epsilon transition from fragment end back to fragment start and to new end
+	if transitions[fragment.end] == nil {
+		transitions[fragment.end] = make(map[string][]string)
+	}
+	transitions[fragment.end]["@e"] = append(transitions[fragment.end]["@e"], fragment.start, end)
+
+	return &NFAFragment{
+		start:       start,
+		end:         end,
+		states:      states,
+		transitions: transitions,
+		alphabet:    alphabet,
+	}
+}
+
+// Kleene plus operation (a+ = aa*)
+func (p *RegexParser) kleenePlus(fragment *NFAFragment) *NFAFragment {
+	star := p.kleeneStar(fragment)
+	return p.concatenate(fragment, star)
 }

@@ -150,7 +150,7 @@ func RegexToNFAHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nfa, err := logic.RegexToNFAComplete(req.Regex)
+	nfa, err := logic.RegexToNFA(req.Regex)
 	if err != nil {
 		http.Error(w, "Regex to NFA conversion error: "+err.Error(), http.StatusInternalServerError)
 		return
