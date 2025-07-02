@@ -406,9 +406,9 @@ func (p *RegexParser) parseFactor() (*NFAFragment, error) {
 		return nil, err
 	}
 
-	for p.peek() == '*' || p.peek() == '+' {
+	for p.peek() == '*' || p.peek() == '∗' || p.peek() == '+' {
 		op := p.advance()
-		if op == '*' {
+		if op == '*' || op == '∗' {
 			base = p.kleeneStar(base)
 		} else if op == '+' {
 			base = p.kleenePlus(base)
